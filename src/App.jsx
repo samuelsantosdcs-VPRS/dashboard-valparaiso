@@ -3159,9 +3159,9 @@ function EventosView({ ano, mes, diaCorte, meses }) {
       
       {/* COMPOSIÇÃO DO PÚBLICO — gráfico de tipos de entrada */}
       {(() => {
-        const tiposMes = DADOS_ACESSO.tipos_entrada_mensal?.[chave];
+        const tiposMensalAgregado = DADOS_ACESSO.tipos_entrada_mensal?.[chave];
         const tiposDiario = DADOS_ACESSO.tipos_entrada_diario?.[chave] || [];
-        if (!tiposMes || tiposMes.length === 0) return null;
+        if (!tiposMensalAgregado || tiposMensalAgregado.length === 0) return null;
         
         // Cores semânticas — mesma ordem do array de dados
         const ORDEM_FAMILIAS = ["Assinante V+", "Convidado V+", "Voucher Online", "Bilheteria Park", "Evento/Excursão", "Corporativo", "Gratuidade", "Operacional", "Sem categoria"];
@@ -3177,17 +3177,31 @@ function EventosView({ ano, mes, diaCorte, meses }) {
           "Sem categoria": "#475569",     // slate-600
         };
         
-        const totalMes = tiposMes.reduce((a, b) => a + b[1], 0);
+        // FILTRAR por diaCorte: agrega só dias <= diaCorte
+        const diasFiltrados = tiposDiario.filter((row) => row[0] <= diaCorte);
         
-        // Dados pra Pie
-        const dadosPie = tiposMes.map(([nome, qtd]) => ({
-          name: nome,
-          value: qtd,
-          pct: (qtd / totalMes) * 100,
-        }));
+        // Agregar por família a partir dos dias filtrados
+        const tiposFiltrado = ORDEM_FAMILIAS.map((fam, i) => {
+          const qtd = diasFiltrados.reduce((s, row) => s + (row[i + 1] || 0), 0);
+          return [fam, qtd];
+        });
+        const totalMes = tiposFiltrado.reduce((a, b) => a + b[1], 0);
         
-        // Dados pra Stacked Bar (por dia)
-        const dadosBar = tiposDiario.map((row) => {
+        // Dia operacional mais recente dentro do filtro
+        const ultimoDiaOp = diasFiltrados.length > 0 ? diasFiltrados[diasFiltrados.length - 1][0] : null;
+        const primeiroDiaOp = diasFiltrados.length > 0 ? diasFiltrados[0][0] : null;
+        
+        // Dados pra Pie (só categorias com valor > 0)
+        const dadosPie = tiposFiltrado
+          .filter(([, v]) => v > 0)
+          .map(([nome, qtd]) => ({
+            name: nome,
+            value: qtd,
+            pct: totalMes > 0 ? (qtd / totalMes) * 100 : 0,
+          }));
+        
+        // Dados pra Stacked Bar (só dias <= diaCorte)
+        const dadosBar = diasFiltrados.map((row) => {
           const obj = { dia: `${row[0]}` };
           ORDEM_FAMILIAS.forEach((fam, i) => {
             obj[fam] = row[i + 1] || 0;
@@ -3196,13 +3210,28 @@ function EventosView({ ano, mes, diaCorte, meses }) {
           return obj;
         });
         
-        // Agrupar V+ (Assinante + Convidado) vs Pagante (Voucher + B.Park) vs Operacional/Outros
+        // Macro-grupos (recalculados sobre o filtro)
+        const grupoSum = (familias) => tiposFiltrado
+          .filter(([n]) => familias.includes(n))
+          .reduce((s, [, v]) => s + v, 0);
         const grupos = {
-          "V+ (Assinante + Convidado)": tiposMes.filter(([n]) => n === "Assinante V+" || n === "Convidado V+").reduce((s, [, v]) => s + v, 0),
-          "Pagante (Voucher + B.Park)": tiposMes.filter(([n]) => n === "Voucher Online" || n === "Bilheteria Park").reduce((s, [, v]) => s + v, 0),
-          "Evento/Corporativo": tiposMes.filter(([n]) => n === "Evento/Excursão" || n === "Corporativo").reduce((s, [, v]) => s + v, 0),
-          "Não-monetizado": tiposMes.filter(([n]) => n === "Gratuidade" || n === "Operacional" || n === "Sem categoria").reduce((s, [, v]) => s + v, 0),
+          "V+ (Assinante + Convidado)": grupoSum(["Assinante V+", "Convidado V+"]),
+          "Pagante (Voucher + B.Park)": grupoSum(["Voucher Online", "Bilheteria Park"]),
+          "Evento/Corporativo": grupoSum(["Evento/Excursão", "Corporativo"]),
+          "Não-monetizado": grupoSum(["Gratuidade", "Operacional", "Sem categoria"]),
         };
+        
+        // Sem dado dentro do filtro
+        if (totalMes === 0) {
+          return (
+            <section className="card rounded-xl p-6 mb-6">
+              <h2 className="display-font text-2xl font-light mb-1">Composição do público</h2>
+              <p className="text-stone-400 text-sm mb-4">
+                Sem acessos registrados até dia {diaCorte} de {meses[mes - 1]}/{ano}.
+              </p>
+            </section>
+          );
+        }
         const CORES_GRUPO = {
           "V+ (Assinante + Convidado)": "#10b981",
           "Pagante (Voucher + B.Park)": "#f59e0b",
@@ -3248,7 +3277,7 @@ function EventosView({ ano, mes, diaCorte, meses }) {
               <div>
                 <h2 className="display-font text-2xl font-light">Composição do público</h2>
                 <p className="text-stone-400 text-sm mt-1">
-                  Quem está entrando no parque em {meses[mes - 1]}/{ano}, por tipo de entrada.
+                  Quem está entrando no parque · {primeiroDiaOp && ultimoDiaOp ? (primeiroDiaOp === ultimoDiaOp ? `dia ${ultimoDiaOp}` : `dias ${primeiroDiaOp}–${ultimoDiaOp}`) : `até dia ${diaCorte}`} de {meses[mes - 1]}/{ano} · {diasFiltrados.length} {diasFiltrados.length === 1 ? "dia" : "dias"} de operação
                 </p>
               </div>
             </div>
@@ -3276,7 +3305,7 @@ function EventosView({ ano, mes, diaCorte, meses }) {
             <div className="grid lg:grid-cols-2 gap-6">
               {/* Donut */}
               <div>
-                <h3 className="text-sm font-medium text-stone-300 mb-3">Distribuição do mês</h3>
+                <h3 className="text-sm font-medium text-stone-300 mb-3">Distribuição no período {totalMes.toLocaleString("pt-BR")} acessos</h3>
                 <div style={{ width: "100%", height: 320 }}>
                   <ResponsiveContainer>
                     <PieChart>
@@ -3319,7 +3348,7 @@ function EventosView({ ano, mes, diaCorte, meses }) {
               
               {/* Stacked bar diário */}
               <div>
-                <h3 className="text-sm font-medium text-stone-300 mb-3">Composição por dia de operação</h3>
+                <h3 className="text-sm font-medium text-stone-300 mb-3">Composição por dia · cada barra mostra a quebra do dia</h3>
                 <div style={{ width: "100%", height: 320 }}>
                   <ResponsiveContainer>
                     <BarChart data={dadosBar} margin={{ top: 5, right: 8, left: -8, bottom: 0 }}>
