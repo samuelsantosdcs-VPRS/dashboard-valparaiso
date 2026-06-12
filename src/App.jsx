@@ -5078,7 +5078,8 @@ function TrafegoView({ ano, mes, meses }) {
   const statusTxt = { verde: "Saudável", amarelo: "Atenção", vermelho: "Crítico" }[dados.status] || "Atenção";
 
   return (
-    <div>
+    <div id="produto-pdf-area">
+      <BotoesExportPDF tituloProduto="Trafego_Pago" ano={ano} mes={mes} meses={meses} />
       {/* Cabeçalho */}
       <section className="card rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
