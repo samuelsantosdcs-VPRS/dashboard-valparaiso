@@ -505,7 +505,7 @@ const DADOS_BILHETERIA = {"resumo":{"2025-1":{"venda_valor":267874.65,"venda_ing
 // ANTECEDÊNCIA DE COMPRA — para cada dia de venda, distribuição de dias até a visita
 // Formato: { "dia_venda": [[delta_dias, valor, qtd], ...] }  delta_dias=null quando sem data de visita
 // ============================================================
-const DADOS_ANTECEDENCIA_COMPRA = {"2026-6":{"1": [[3, 1114.8, 23], [4, 963.8, 18], [5, 2736.6, 54], [6, 249.5, 5], [17, 539.73, 9]], "2": [[2, 1229.2, 24], [3, 399.2, 8], [4, 648.7, 13]], "3": [[1, 4910.5, 89], [2, 1184.3, 21], [3, 2635.4, 52], [4, 1787.4, 44], [37, 308.88, 7]], "4": [[0, 1633.4, 22], [1, 1531.0, 33], [2, 2603.3, 49], [3, 1975.2, 40], [9, 237.17, 4], [25, 329.4, 6]], "5": [[0, 2614.62, 31], [1, 4551.73, 83], [2, 1627.63, 27], [8, 486.4, 7], [15, 288.17, 5], [29, 339.17, 7], [34, 223.88, 4], [36, 545.2, 10], [42, 356.7, 4]], "6": [[0, 416.0, 5], [1, 7197.5, 133], [40, 578.43, 10]], "7": [[0, 764.0, 8], [32, 259.5, 5]], "8": [[6, 1049.22, 14], [12, 257.8, 5], [13, 444.8, 5], [24, 288.7, 7], [31, 123.8, 2], [33, 237.17, 4], [40, 376.4, 7]], "9": [[2, 143.8, 2], [3, 143.8, 2], [30, 223.88, 4]], "10": [[1, 259.6, 4], [2, 482.08, 14], [4, 859.97, 9], [15, 143.94, 2], [24, 299.6, 4], [33, 253.6, 6]], "11": [[0, 1620.44, 18], [1, 1133.05, 24], [2, 1436.51, 20], [9, 299.6, 4]], "12": [[0, 876.9, 10], [1, 2943.47, 42], [2, 598.06, 6], [6, 220.17, 3], [8, 349.5, 5], [16, 214.9, 2], [43, 255.6, 4]], "13": [[1, 1976.17, 18], [15, 440.34, 2]], "14": [[0, 129.0, 1], [4, 287.6, 4], [7, 231.9, 3], [11, 291.6, 4], [60, 176.84, 3]], "15": [[3, 223.8, 3], [4, 479.2, 8], [5, 186.8, 3], [10, 220.17, 3], [60, 59.92, 1]], "16": [[2, 796.97, 10], [3, 259.6, 4], [4, 683.1, 11], [5, 472.16, 5], [38, 223.88, 4]], "17": [[1, 1763.49, 30], [2, 479.2, 8], [3, 757.57, 13], [4, 711.76, 8], [24, 768.9, 11], [25, 220.17, 1], [36, 176.7, 3], [53, 409.53, 6]]}};
+const DADOS_ANTECEDENCIA_COMPRA = {"2026-6":{"_geral":{"4":[8887.9,158],"5":[6692.92,111],"6":[13591.73,256],"7":[13601.23,257],"11":[2023.84,24],"12":[2635.83,50],"13":[5103.55,73],"14":[4612.42,48],"18":[3831.76,59],"19":[1218.0,20],"20":[2822.54,46],"21":[1860.62,21],"25":[655.71,9],"28":[655.24,4],"29":[329.4,6]},"1": [[3, 1114.8, 23], [4, 963.8, 18], [5, 2736.6, 54], [6, 249.5, 5], [17, 539.73, 9]], "2": [[2, 1229.2, 24], [3, 399.2, 8], [4, 648.7, 13]], "3": [[1, 4910.5, 89], [2, 1184.3, 21], [3, 2635.4, 52], [4, 1787.4, 44], [37, 308.88, 7]], "4": [[0, 1633.4, 22], [1, 1531.0, 33], [2, 2603.3, 49], [3, 1975.2, 40], [9, 237.17, 4], [25, 329.4, 6]], "5": [[0, 2614.62, 31], [1, 4551.73, 83], [2, 1627.63, 27], [8, 486.4, 7], [15, 288.17, 5], [29, 339.17, 7], [34, 223.88, 4], [36, 545.2, 10], [42, 356.7, 4]], "6": [[0, 416.0, 5], [1, 7197.5, 133], [40, 578.43, 10]], "7": [[0, 764.0, 8], [32, 259.5, 5]], "8": [[6, 1049.22, 14], [12, 257.8, 5], [13, 444.8, 5], [24, 288.7, 7], [31, 123.8, 2], [33, 237.17, 4], [40, 376.4, 7]], "9": [[2, 143.8, 2], [3, 143.8, 2], [30, 223.88, 4]], "10": [[1, 259.6, 4], [2, 482.08, 14], [4, 859.97, 9], [15, 143.94, 2], [24, 299.6, 4], [33, 253.6, 6]], "11": [[0, 1620.44, 18], [1, 1133.05, 24], [2, 1436.51, 20], [9, 299.6, 4]], "12": [[0, 876.9, 10], [1, 2943.47, 42], [2, 598.06, 6], [6, 220.17, 3], [8, 349.5, 5], [16, 214.9, 2], [43, 255.6, 4]], "13": [[1, 1976.17, 18], [15, 440.34, 2]], "14": [[0, 129.0, 1], [4, 287.6, 4], [7, 231.9, 3], [11, 291.6, 4], [60, 176.84, 3]], "15": [[3, 223.8, 3], [4, 479.2, 8], [5, 186.8, 3], [10, 220.17, 3], [60, 59.92, 1]], "16": [[2, 796.97, 10], [3, 259.6, 4], [4, 683.1, 11], [5, 472.16, 5], [38, 223.88, 4]], "17": [[1, 1763.49, 30], [2, 479.2, 8], [3, 757.57, 13], [4, 711.76, 8], [24, 768.9, 11], [25, 220.17, 1], [36, 176.7, 3], [53, 409.53, 6]]}};
 
 
 // Bilheteria Park — vendas físicas no local (PDV) com formas de pagamento
@@ -4170,213 +4170,183 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
       )}
 
       {/* CALENDÁRIO HEATMAP */}
+      {/* CALENDÁRIO DUPLO — Vendas × Destinação de Visitas */}
       <section className="card rounded-xl p-6 mb-6">
-        <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
+        <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
           <div>
             <h2 className="display-font text-2xl font-light">Calendário de {meses[mes - 1]}/{ano}</h2>
             <p className="text-stone-400 text-sm mt-1">
-              Total no mês: <span className="mono-font text-stone-200">{totalDiaCalendario.toLocaleString("pt-BR")} ingressos</span>
-              {calMode === "visita" ? " agendados" : " vendidos"}
+              Clique em um dia no calendário de <span className="text-emerald-400">vendas</span> para ver para quando foram agendadas as visitas
             </p>
           </div>
-          <div className="flex gap-1 p-1 rounded-lg" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          {diaAntecedenciaSelecionado && (
             <button
-              onClick={() => setCalMode("visita")}
-              style={{
-                border: "none",
-                background: calMode === "visita" ? "rgba(139,92,246,0.15)" : "transparent",
-                color: calMode === "visita" ? "#a78bfa" : "#a8a29e",
-                padding: "6px 12px", fontSize: 12, borderRadius: 6, cursor: "pointer", fontFamily: "inherit",
-              }}
+              onClick={() => setDiaAntecedenciaSelecionado(null)}
+              style={{ border:"none", background:"rgba(255,255,255,0.06)", color:"#a8a29e", padding:"6px 12px", fontSize:12, borderRadius:6, cursor:"pointer", fontFamily:"inherit" }}
             >
-              📅 Visitas agendadas
+              ✕ Limpar seleção
             </button>
-            <button
-              onClick={() => setCalMode("venda")}
-              style={{
-                border: "none",
-                background: calMode === "venda" ? "rgba(139,92,246,0.15)" : "transparent",
-                color: calMode === "venda" ? "#a78bfa" : "#a8a29e",
-                padding: "6px 12px", fontSize: 12, borderRadius: 6, cursor: "pointer", fontFamily: "inherit",
-              }}
-            >
-              💰 Vendas realizadas
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* Header dias da semana */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {diasNomes.map((n, i) => (
-            <div key={i} className="text-center text-xs text-stone-500 mono-font py-1">{n}</div>
-          ))}
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        {/* Grid do calendário */}
-        <div className="grid grid-cols-7 gap-1">
-          {/* Espaços vazios do início */}
-          {Array.from({ length: primeiroDiaDaSemana }).map((_, i) => (
-            <div key={`empty-${i}`} />
-          ))}
-          {/* Dias do mês */}
-          {Array.from({ length: diasMes }, (_, i) => i + 1).map((d) => {
-            const dadoVenda = mapVenda.get(d);
-            const dadoVisita = mapVisita.get(d);
-            const dadoAtivo = calMode === "visita" ? dadoVisita : dadoVenda;
-            const max = calMode === "visita" ? maxVisita : maxVenda;
-            const intensidade = dadoAtivo ? Math.min(1, dadoAtivo.ingressos / max) : 0;
-            const corBase = calMode === "visita" ? "139,92,246" : "16,185,129";
-            const bg = intensidade > 0 
-              ? `rgba(${corBase}, ${0.08 + intensidade * 0.5})` 
-              : "rgba(255,255,255,0.02)";
-            const borda = intensidade > 0 
-              ? `rgba(${corBase}, ${0.2 + intensidade * 0.4})` 
-              : "rgba(255,255,255,0.04)";
-            
-            const dtRef = new Date(ano, mes - 1, d);
-            const diaSem = dtRef.getDay();
-            const ehFds = diaSem === 0 || diaSem === 6;
-            
-            return (
-              <div
-                key={d}
-                className="aspect-square rounded-lg p-2 flex flex-col justify-between relative overflow-hidden transition-all hover:scale-105"
-                style={{
-                  background: bg,
-                  border: diaAntecedenciaSelecionado === d ? "2px solid #34d399" : `1px solid ${borda}`,
-                  cursor: (dadoAtivo && calMode === "venda") ? "pointer" : dadoAtivo ? "default" : "default",
-                }}
-                onClick={() => {
-                  if (calMode === "venda" && DADOS_ANTECEDENCIA_COMPRA?.[chave]?.[String(d)]) {
-                    setDiaAntecedenciaSelecionado(diaAntecedenciaSelecionado === d ? null : d);
-                  }
-                }}
-                title={dadoAtivo 
-                  ? `Dia ${d}: ${dadoAtivo.ingressos} ingressos · ${dadoAtivo.vouchers} pedidos · ${formatBRL(dadoAtivo.valor)}${calMode === "venda" && DADOS_ANTECEDENCIA_COMPRA?.[chave]?.[String(d)] ? " · clique para ver p/ quando" : ""}`
-                  : `Dia ${d}: sem dados`}
-              >
-                <div className="flex items-start justify-between">
-                  <span className={`mono-font text-xs ${ehFds ? "text-amber-400" : "text-stone-400"}`}>
-                    {d}
-                  </span>
-                  {d === diaCorte && (
-                    <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                  )}
-                </div>
-                {dadoAtivo && (
-                  <div className="text-right">
-                    <div className="mono-font font-bold" style={{ fontSize: 14, color: calMode === "visita" ? "#a78bfa" : "#10b981" }}>
-                      {dadoAtivo.ingressos}
-                    </div>
-                    <div className="text-[9px] text-stone-500 leading-tight">
-                      {calMode === "visita" ? "vis." : formatBRL(dadoAtivo.valor).replace("R$ ","R$")}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Legenda do heatmap */}
-        <div className="mt-4 flex items-center justify-end gap-2 text-xs text-stone-500">
-          <span>Menos</span>
-          {[0.1, 0.25, 0.45, 0.65, 0.85].map((v) => (
-            <div
-              key={v}
-              className="w-4 h-4 rounded"
-              style={{
-                background: `rgba(${calMode === "visita" ? "139,92,246" : "16,185,129"}, ${0.08 + v * 0.5})`,
-                border: `1px solid rgba(${calMode === "visita" ? "139,92,246" : "16,185,129"}, ${0.2 + v * 0.4})`,
-              }}
-            />
-          ))}
-          <span>Mais</span>
-        </div>
-      </section>
-
-
-      {/* PAINEL DE ANTECEDÊNCIA — para onde vão as visitas do dia selecionado */}
-      {diaAntecedenciaSelecionado != null && DADOS_ANTECEDENCIA_COMPRA?.[chave]?.[String(diaAntecedenciaSelecionado)] && (() => {
-        const distrib = DADOS_ANTECEDENCIA_COMPRA[chave][String(diaAntecedenciaSelecionado)];
-        const totalValor = distrib.reduce((a, r) => a + r[1], 0);
-        const totalQtd = distrib.reduce((a, r) => a + r[2], 0);
-        const maxValor = Math.max(...distrib.map(r => r[1]));
-        const labelDelta = (delta) => {
-          if (delta === null) return "Sem data de visita";
-          if (delta === 0) return "Mesmo dia (D+0)";
-          if (delta === 1) return "1 dia depois (D+1)";
-          return `${delta} dias depois (D+${delta})`;
-        };
-        const dataVisitaAbsoluta = (delta) => {
-          if (delta === null) return null;
-          const dt = new Date(ano, mes - 1, diaAntecedenciaSelecionado);
-          dt.setDate(dt.getDate() + delta);
-          return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-        };
-        return (
-          <section className="card rounded-xl p-6 mb-6" style={{ border: "1px solid rgba(52,211,153,0.25)" }}>
-            <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar size={14} className="text-emerald-400" />
-                  <span className="text-xs uppercase tracking-widest text-stone-400">
-                    Vendido no dia {diaAntecedenciaSelecionado} · para quando são essas visitas
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-3">
-                  <span className="display-font text-2xl font-light">{formatBRL(totalValor)}</span>
-                  <span className="text-stone-400 text-sm">{totalQtd} ingressos</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setDiaAntecedenciaSelecionado(null)}
-                style={{ border: "none", background: "rgba(255,255,255,0.05)", color: "#a8a29e", padding: "6px 10px", fontSize: 12, borderRadius: 6, cursor: "pointer", fontFamily: "inherit" }}
-              >
-                ✕ Fechar
-              </button>
+          {/* ── CALENDÁRIO ESQUERDO: Vendas ── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div style={{ width:10, height:10, borderRadius:2, background:"#10b981" }} />
+              <span className="text-xs uppercase tracking-widest text-stone-400">💰 Vendas realizadas</span>
             </div>
-            <div className="space-y-2">
-              {distrib.map(([delta, valor, qtd], i) => {
-                const pct = (valor / totalValor) * 100;
-                const barWidth = (valor / maxValor) * 100;
-                const dataAbs = dataVisitaAbsoluta(delta);
+            {/* Header dias da semana */}
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {["D","S","T","Q","Q","S","S"].map((n, i) => (
+                <div key={i} className="text-center text-[10px] text-stone-600 mono-font py-1">{n}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: primeiroDiaDaSemana }).map((_, i) => <div key={`ev-${i}`} />)}
+              {Array.from({ length: diasMes }, (_, i) => i + 1).map((d) => {
+                const dadoVenda = mapVenda.get(d);
+                const temAntec = !!DADOS_ANTECEDENCIA_COMPRA?.[chave]?.[String(d)];
+                const selecionado = diaAntecedenciaSelecionado === d;
+                const intensidade = dadoVenda ? Math.min(1, dadoVenda.ingressos / maxVenda) : 0;
+                const bg = selecionado
+                  ? "rgba(52,211,153,0.25)"
+                  : intensidade > 0
+                  ? `rgba(16,185,129,${0.08 + intensidade * 0.5})`
+                  : "rgba(255,255,255,0.02)";
+                const borda = selecionado
+                  ? "2px solid #34d399"
+                  : intensidade > 0
+                  ? `rgba(16,185,129,${0.2 + intensidade * 0.4})`
+                  : "rgba(255,255,255,0.04)";
+                const dtRef = new Date(ano, mes - 1, d);
+                const ehFds = [0,6].includes(dtRef.getDay());
                 return (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-32 text-xs text-stone-400 flex-shrink-0">
-                      {labelDelta(delta)}
-                      {dataAbs && <span className="text-stone-600 ml-1">({dataAbs})</span>}
+                  <div
+                    key={d}
+                    onClick={() => temAntec && setDiaAntecedenciaSelecionado(selecionado ? null : d)}
+                    className="aspect-square rounded-lg p-1 flex flex-col justify-between relative transition-all"
+                    style={{
+                      background: bg,
+                      border: borda,
+                      cursor: temAntec ? "pointer" : "default",
+                      transform: selecionado ? "scale(1.08)" : "scale(1)",
+                    }}
+                    title={dadoVenda ? `Dia ${d}: ${formatBRL(dadoVenda.valor)} · ${dadoVenda.ingressos} ing.${temAntec ? " · clique para ver destino" : ""}` : `Dia ${d}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className={`mono-font text-[10px] font-bold ${ehFds ? "text-amber-400" : selecionado ? "text-emerald-300" : "text-stone-400"}`}>{d}</span>
+                      {temAntec && !selecionado && <div style={{ width:5,height:5,borderRadius:"50%",background:"#34d399" }} />}
+                      {selecionado && <div style={{ width:5,height:5,borderRadius:"50%",background:"#34d399",boxShadow:"0 0 6px #34d399" }} />}
                     </div>
-                    <div className="flex-1 relative h-6 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-                      <div
-                        className="absolute top-0 left-0 h-full rounded"
-                        style={{
-                          width: `${barWidth}%`,
-                          background: delta === 0
-                            ? "linear-gradient(90deg, #10b981, #34d399)"
-                            : delta !== null && delta <= 3
-                            ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
-                            : "linear-gradient(90deg, #f59e0b, #fbbf24)",
-                        }}
-                      />
-                    </div>
-                    <div className="w-28 text-right text-xs mono-font text-stone-300 flex-shrink-0">
-                      {formatBRL(valor)} <span className="text-stone-500">({qtd})</span>
-                    </div>
-                    <div className="w-12 text-right text-xs mono-font text-stone-500 flex-shrink-0">
-                      {pct.toFixed(0)}%
-                    </div>
+                    {dadoVenda && (
+                      <div>
+                        <div className="text-[9px] mono-font text-emerald-400 leading-tight">{formatBRL(dadoVenda.valor)}</div>
+                        <div className="text-[9px] text-stone-500 leading-tight">{dadoVenda.ingressos} ing</div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-            <p className="text-xs text-stone-500 mt-4">
-              Leitura: das vendas feitas no dia {diaAntecedenciaSelecionado}, esta é a distribuição de quando os clientes pretendem visitar o parque.
-              Verde = visita no mesmo dia da compra · Roxo = curto prazo (1–3 dias) · Amarelo = antecedência maior.
-            </p>
-          </section>
-        );
-      })()}
+            <div className="mt-2 text-[10px] text-stone-600 flex items-center gap-1">
+              <div style={{ width:6,height:6,borderRadius:"50%",background:"#34d399" }} />
+              Dias com ponto: clicáveis (têm dados de destino)
+            </div>
+          </div>
+
+          {/* ── CALENDÁRIO DIREITO: Destinação das visitas ── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div style={{ width:10, height:10, borderRadius:2, background:"#8b5cf6" }} />
+              <span className="text-xs uppercase tracking-widest text-stone-400">
+                📅 {diaAntecedenciaSelecionado ? `Visitas das compras do dia ${diaAntecedenciaSelecionado}` : "Destino das visitas — todos os dias"}
+              </span>
+            </div>
+            {/* Header dias da semana */}
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {["D","S","T","Q","Q","S","S"].map((n, i) => (
+                <div key={i} className="text-center text-[10px] text-stone-600 mono-font py-1">{n}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {(() => {
+                // Montar mapa de visitas baseado no dia selecionado (antecedência) OU no geral (calendario_visita)
+                let mapDestino = new Map();
+                let modoAntec = false;
+                if (diaAntecedenciaSelecionado && DADOS_ANTECEDENCIA_COMPRA?.[chave]?.[String(diaAntecedenciaSelecionado)]) {
+                  modoAntec = true;
+                  const distrib = DADOS_ANTECEDENCIA_COMPRA[chave][String(diaAntecedenciaSelecionado)];
+                  distrib.forEach(([delta, valor, qtd]) => {
+                    if (delta !== null) {
+                      const dVisita = diaAntecedenciaSelecionado + delta;
+                      if (dVisita >= 1 && dVisita <= diasMes) {
+                        const prev = mapDestino.get(dVisita) || { valor: 0, qtd: 0 };
+                        mapDestino.set(dVisita, { valor: prev.valor + valor, qtd: prev.qtd + qtd });
+                      }
+                    }
+                  });
+                } else {
+                  // Modo padrão: distribuição REAL de destino de todos os dias de venda
+                  modoAntec = true;
+                  const geral = DADOS_ANTECEDENCIA_COMPRA?.[chave]?.["_geral"] || {};
+                  Object.entries(geral).forEach(([dStr, [valor, qtd]]) => {
+                    mapDestino.set(Number(dStr), { valor, qtd });
+                  });
+                }
+                const maxDestino = Math.max(...Array.from(mapDestino.values()).map(d => d.qtd), 1);
+                const corRGB = modoAntec ? "16,185,129" : "139,92,246";
+
+                return (
+                  <>
+                    {Array.from({ length: primeiroDiaDaSemana }).map((_, i) => <div key={`dv-${i}`} />)}
+                    {Array.from({ length: diasMes }, (_, i) => i + 1).map((d) => {
+                      const dado = mapDestino.get(d);
+                      const intensidade = dado ? Math.min(1, dado.qtd / maxDestino) : 0;
+                      const bg = intensidade > 0
+                        ? `rgba(${corRGB},${0.08 + intensidade * 0.55})`
+                        : "rgba(255,255,255,0.02)";
+                      const borda = intensidade > 0
+                        ? `rgba(${corRGB},${0.2 + intensidade * 0.4})`
+                        : "rgba(255,255,255,0.04)";
+                      const dtRef = new Date(ano, mes - 1, d);
+                      const ehFds = [0,6].includes(dtRef.getDay());
+                      return (
+                        <div
+                          key={d}
+                          className="aspect-square rounded-lg p-1 flex flex-col justify-between relative"
+                          style={{ background: bg, border: `1px solid ${borda}` }}
+                          title={dado ? `Dia ${d}: ${dado.qtd} ingressos · ${formatBRL(dado.valor)}` : `Dia ${d}: sem visitas`}
+                        >
+                          <div>
+                            <span className={`mono-font text-[10px] font-bold ${ehFds ? "text-amber-400" : "text-stone-400"}`}>{d}</span>
+                          </div>
+                          {dado && (
+                            <div>
+                              <div className={`text-[9px] mono-font leading-tight ${modoAntec ? "text-emerald-400" : "text-violet-400"}`}>{dado.qtd} ing</div>
+                              <div className="text-[9px] text-stone-500 leading-tight">{formatBRL(dado.valor)}</div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                );
+              })()}
+            </div>
+            {!diaAntecedenciaSelecionado && (
+              <div className="mt-2 text-[10px] text-stone-600">Distribuição real de destino — todos os dias de venda combinados</div>
+            )}
+            {diaAntecedenciaSelecionado && (
+              <div className="mt-2 text-[10px] text-stone-500">
+                Mostrando apenas visitas compradas no dia {diaAntecedenciaSelecionado} (no mesmo mês)
+              </div>
+            )}
+          </div>
+
+        </div>
+      </section>
 
       {/* GRÁFICO DIÁRIO COMBINADO */}
       <section className="card rounded-xl p-6 mb-6">
