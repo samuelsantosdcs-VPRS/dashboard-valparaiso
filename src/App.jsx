@@ -661,6 +661,65 @@ const DADOS_TRAFEGO = {
       { nome: "CP229 · Grupo Institucional (3 anúncios IM)", descricao: "Acaba Rápido, Oferta Especial, 5 Ingressos", status: "active" },
       { nome: "CP230 · Esquenta Férias (2 anúncios)", descricao: "Abertura 1° Lote (VI) + Férias Chegando (IM)", status: "active" },
     ],
+  },
+  "2026-7": {
+    dataVerificacao: "02/07/2026",
+    proximaOtimizacao: "09/07/2026",
+    status: "amarelo",
+    statusNota: "CP233 (Segunda Divertida) pausado por CPA alto (R$137,30). Subidas CP234 (Alcance) e CP235 (Conversão · A&B). Google ADS reativado, ainda sem dados suficientes para otimização.",
+    periodoNota: "Fonte: Meta ADS Manager · Acumulado mês · Ingressos Online referente aos últimos 7 dias (25/06 a 02/07).",
+    kpisGerais: {
+      investimentoTotal: 7275.14,
+      impressoes: 0,
+      alcanceUnico: 0,
+      frequenciaMedia: 0,
+      cpmMedio: 0,
+      comprasTotal: 48,
+      cpaGeral: 106.54,
+      roasPonderado: 2.17,
+      leadsTotal: 467,
+      receitaEstimada: 11090.6,
+    },
+    kpisPorProduto: [
+      { produto: "Ingressos Online", icone: "🎟️", investido: 5113.69, compras: 48, cpa: 106.54, roas: 2.17, leads: 0, impressoes: 0, cpm: 0, cor: "#10b981" },
+      { produto: "Eventos",          icone: "🎉", investido: 1339.13, compras: 0,  cpa: 4.03,   roas: 0,    leads: 332, impressoes: 0, cpm: 0, cor: "#eab308" },
+      { produto: "Assinatura V+",    icone: "⭐", investido: 822.32,  compras: 0,  cpa: 6.09,   roas: 0,    leads: 135, impressoes: 0, cpm: 0, cor: "#8b5cf6" },
+    ],
+    plataformas: [
+      { nome: "Meta ADS", icone: "📘", cpa: 106.54, conversoes: 48, labelConv: "Compras (Ingressos)", cor: "#1877f2" },
+      { nome: "Google ADS", icone: "🔍", cpa: 0, conversoes: 0, labelConv: "Sem dados suficientes", cor: "#ea4335" },
+    ],
+    campanhas: [
+      { plataforma: "Meta", produto: "Ingressos Online", objetivo: "Conversão",  icone: "🎟️", investido: 5113.69, resultado: 48,  labelResultado: "compras",   cpa: 106.54, roas: 2.17, cor: "#1877f2", status: "active" },
+      { plataforma: "Meta", produto: "Eventos",          objetivo: "Mensagens", icone: "📩", investido: 1339.13, resultado: 332, labelResultado: "mensagens", cpa: 4.03,   roas: null, cor: "#1877f2", status: "active" },
+      { plataforma: "Meta", produto: "Assinatura V+",    objetivo: "Mensagens", icone: "📩", investido: 822.32,  resultado: 135, labelResultado: "mensagens", cpa: 6.09,   roas: null, cor: "#1877f2", status: "active" },
+    ],
+    criativos: [
+      { nome: "CP234 · AD03 IM · Diversão Sem Fim", roas: null, cpa: null, url: "https://fb.me/adspreview/managedaccount/1VYKpAEJDfTx4Sl", destaque: false },
+      { nome: "CP234 · AD02 IM · Aberto Todos os Dias", roas: null, cpa: null, url: "https://fb.me/adspreview/managedaccount/21LBEX3kkvUbn8x", destaque: false },
+      { nome: "CP235 · Restaurante", roas: null, cpa: null, url: "https://fb.me/adspreview/managedaccount/1UhpbEFgsNnhfZs", destaque: false },
+      { nome: "CP235 · Contagem Regressiva", roas: null, cpa: null, url: "https://fb.me/adspreview/managedaccount/22xuChHaHGLdms2", destaque: false },
+      { nome: "CP235 · Compre Aqui", roas: null, cpa: null, url: "https://fb.me/adspreview/managedaccount/2atcEcELHqcWQV2", destaque: false },
+      { nome: "CP235 · Melhor Tarifa", roas: null, cpa: null, url: "https://fb.me/adspreview/managedaccount/1Uw82n1KiLBLX2G", destaque: false },
+      { nome: "CP232 · [ANTECIPOU] (PAUSADO)", roas: null, cpa: 219.69, url: "", destaque: false },
+      { nome: "CP217 · [CONSULTORES V+] CJ2 (PAUSADO)", roas: null, cpa: 8.89, url: "https://fb.me/adspreview/managedaccount/21zZDswQRYU3LRM", destaque: false },
+    ],
+    otimizacoes: [
+      { plataforma: "Meta", cor: "#1877f2", responsavel: "Wolf", acoes: [
+        "Pausei CP233 (Conv. Ingressos Online · Segunda Divertida) por CPA alto — R$ 137,30.",
+        "Subi CP234 — Alcance · Ingressos · Segunda Divertida, com criativos institucionais AD03 [Diversão Sem Fim], AD02 [Aberto Todos os Dias] e [Restaurante].",
+        "Pausei anúncio [ANTECIPOU] na CP232 (Conv. Ingressos Online) por CPA alto — R$ 219,69.",
+        "Pausei anúncio [CONSULTORES V+] na CP217 (Msg.Wpp Assinatura V+) CJ2 por custo elevado — R$ 8,89.",
+        "Subi CP235 — Conversão · Ingressos Online · A&B, com anúncios [Restaurante], [Contagem Regressiva], [Compre Aqui] e [Melhor Tarifa].",
+      ] },
+      { plataforma: "Google", cor: "#ea4335", responsavel: "—", acoes: [
+        "Campanhas reativadas recentemente — ainda sem dados suficientes para uma otimização.",
+      ] },
+    ],
+    criativosNovos: [
+      { nome: "CP234 · Alcance (3 institucionais)", descricao: "Diversão Sem Fim (AD03), Aberto Todos os Dias (AD02), Restaurante", status: "active" },
+      { nome: "CP235 · Conversão A&B (4 anúncios)", descricao: "Restaurante, Contagem Regressiva, Compre Aqui, Melhor Tarifa", status: "active" },
+    ],
   }
 };
 
