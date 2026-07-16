@@ -7258,8 +7258,10 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
     // Se o produto está excluído (ex: Quiosque em 2026), meta = 0
     const ehExcluido = produtosExcluidosMeta.includes(p.id);
     
-    // Meta Geral: ano anterior × 1.20 (ou zero se excluído)
-    const metaGeral = ehExcluido ? 0 : anoAnt * 1.20;
+    // Meta Geral: manual da diretoria (METAS_MANUAIS) se existir;
+    // senão ano anterior × 1.20 (ou zero se excluído)
+    const metaManual = METAS_MANUAIS[chaveAtual]?.[p.id];
+    const metaGeral = ehExcluido ? 0 : (metaManual !== undefined ? metaManual : anoAnt * 1.20);
     // Expectativa: meta proporcional ao dia decorrido (meta até "hoje")
     const expectativa = metaGeral * proporcaoMes;
     // Déficit ou Superávit: realizado - expectativa
