@@ -1846,9 +1846,16 @@ function BotoesExportPDF({ tituloProduto, ano, mes, meses }) {
       const altura = Math.max(elemento.scrollHeight, elemento.offsetHeight);
       const largura = Math.max(elemento.scrollWidth, elemento.offsetWidth);
       
+      // Escala dinâmica: navegadores limitam a área máxima do canvas
+      // (iOS Safari ~16,7M px²; desktop ~268M px²). Páginas longas como a
+      // do A&B estouravam o limite com scale fixo 1.5 e o PDF saía vazio.
+      const ehIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const MAX_CANVAS_AREA = ehIOS ? 14000000 : 200000000; // margem de segurança
+      const scaleDinamica = Math.min(1.5, Math.sqrt(MAX_CANVAS_AREA / (largura * altura)));
+      
       const canvas = await window.html2canvas(elemento, {
         backgroundColor: '#0a0a0a',
-        scale: 1.5, // bom equilíbrio qualidade/tamanho
+        scale: scaleDinamica,
         useCORS: true,
         allowTaint: true,
         logging: false,
@@ -1863,7 +1870,14 @@ function BotoesExportPDF({ tituloProduto, ano, mes, meses }) {
       // Restaura botões
       botoes.forEach(b => b.style.visibility = '');
       
+      // Valida a captura: canvas estourado retorna vazio ('data:,')
+      if (!canvas.width || !canvas.height) {
+        throw new Error('Canvas vazio: página muito longa para captura neste dispositivo');
+      }
       const imgData = canvas.toDataURL('image/jpeg', 0.92); // JPEG com 92% qualidade (menor que PNG)
+      if (!imgData || imgData.length < 1000) {
+        throw new Error('Captura inválida: limite de canvas do navegador excedido');
+      }
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF('p', 'mm', 'a4');
       
