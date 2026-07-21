@@ -1812,15 +1812,24 @@ function BotoesExportPDF({ tituloProduto, ano, mes, meses }) {
   const exportarPDFFormatado = async () => {
     setExportando(true);
     try {
-      // Carrega bibliotecas dinamicamente do CDN
+      // Carrega bibliotecas dinamicamente do CDN.
+      // html2canvas-pro: fork mantido do html2canvas, compatível com funções
+      // de cor modernas do CSS (oklch, color-mix, lab) que faziam o 1.4.1
+      // lançar erro antes de gerar o canvas em algumas abas.
       if (!window.html2canvas) {
-        await new Promise((resolve, reject) => {
+        const carregarScript = (src) => new Promise((resolve, reject) => {
           const s = document.createElement('script');
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          s.src = src;
           s.onload = resolve;
           s.onerror = reject;
           document.head.appendChild(s);
         });
+        try {
+          await carregarScript('https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.11/dist/html2canvas-pro.min.js');
+        } catch (e) {
+          // fallback: versão clássica no cdnjs
+          await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+        }
       }
       if (!window.jspdf) {
         await new Promise((resolve, reject) => {
@@ -1905,7 +1914,7 @@ function BotoesExportPDF({ tituloProduto, ano, mes, meses }) {
       pdf.save(nomeArquivo);
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
-      alert('Erro ao gerar PDF. Tente o "Imprimir PDF" do navegador (Ctrl+P).');
+      alert('Erro ao gerar PDF: ' + (err && err.message ? err.message : err) + '\n\nAlternativa: use o "Imprimir PDF" do navegador (Ctrl+P).');
       // Restaura botões em caso de erro
       const botoes = document.querySelectorAll('.print\\:hidden');
       botoes.forEach(b => b.style.visibility = '');
