@@ -940,8 +940,23 @@ const getValorConsultor = (ano, mes, nome) => {
 // ============================================================
 export default function App() {
   const [produtoId, setProdutoId] = useState("visao_executiva");
-  const [ano, setAno] = useState(2026);
-  const [mes, setMes] = useState(7);
+  // Mês/ano padrão = mês corrente, com fallback para o último mês que tem
+  // dados cadastrados em OVERRIDES_DIRETORIA (evita abrir num mês vazio).
+  const [anoInicial, mesInicial] = (() => {
+    const hoje = new Date();
+    let a = hoje.getFullYear();
+    let m = hoje.getMonth() + 1;
+    if (OVERRIDES_DIRETORIA[`${a}-${m}`]) return [a, m];
+    // volta até 24 meses procurando o último mês com dados
+    for (let i = 0; i < 24; i++) {
+      m -= 1;
+      if (m === 0) { m = 12; a -= 1; }
+      if (OVERRIDES_DIRETORIA[`${a}-${m}`]) return [a, m];
+    }
+    return [2026, 7];
+  })();
+  const [ano, setAno] = useState(anoInicial);
+  const [mes, setMes] = useState(mesInicial);
   // Período: dia inicial e final do filtro (range livre)
   const [diaInicio, setDiaInicio] = useState(1);
   const [diaFim, setDiaFim] = useState(() => {
