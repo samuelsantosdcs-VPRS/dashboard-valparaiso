@@ -2732,6 +2732,8 @@ const getABAnoAnterior = (ano, mes) =>
   getABMes(ano - 1, mes) || { total: 0, dias: {}, produtos: [], lojas: [], fine: { total: 0, dias: {} } };
 
 function ConsumoAB({ ano, mes, diaCorte, diaInicio = 1, meses }) {
+  // "mes" compara dia 1 com dia 1 · "semana" compara 2º sábado com 2º sábado
+  const [alinhamento, setAlinhamento] = useState("semana");
   // Detectar dados disponíveis dinamicamente
   // Tem dados se: existe override do mês OU existe DADOS_AB[ano][algo]
   const chaveMesAno = `${ano}-${mes}`;
@@ -2784,16 +2786,56 @@ function ConsumoAB({ ano, mes, diaCorte, diaInicio = 1, meses }) {
     ...Object.keys(d26.dias).map(Number),
   ]);
 
-  // Série para o gráfico diário (estendido até dia 30)
+  // ---------- SÉRIE DO GRÁFICO DIÁRIO ----------
+  // Três correções em relação à versão anterior:
+  //  1) o laço ia até o dia 30 e cortava o dia 31 (agosto tem 31);
+  //  2) o Fini nunca aparecia porque o relatório dele é mensal, sem dia a dia;
+  //  3) comparar por dia do mês desalinha os anos, porque o calendário de
+  //     operação muda (01/08/2025 foi sexta, 01/08/2026 foi sábado).
+  const totalDiasMes = diasNoMes(ano, mes);
+  const DIA_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+  // O relatório do Fini não traz quebra diária. Quando não houver dia a dia,
+  // rateia o total do mês proporcionalmente ao A&B de cada dia — mesma prática
+  // já usada para distribuir A&B quando o relatório vem só com o total.
+  const fineTemDiario = Object.keys(fine26.dias).length > 0;
+  const baseAB = Object.values(d26.dias).reduce((a, b) => a + b, 0);
+  const fineDoDia = (d) => {
+    if (fineTemDiario) return fine26.dias[d] || null;
+    if (!baseAB || !d26.dias[d] || !fine26.total) return null;
+    return Number(((d26.dias[d] / baseAB) * fine26.total).toFixed(2));
+  };
+
+  const rotuloDia = (d) => `${String(d).padStart(2, "0")}/${String(mes).padStart(2, "0")} · ${DIA_SEMANA[new Date(ano, mes - 1, d).getDay()]}`;
+
+  // Equivalente do dia no ano anterior pela mesma posição na semana:
+  // 2º sábado de agosto/2026 casa com o 2º sábado de agosto/2025.
+  const equivalenteAnoAnterior = (d) => {
+    const diaSemana = new Date(ano, mes - 1, d).getDay();
+    const ocorrencia = Math.floor((d - 1) / 7) + 1;
+    const totalAnt = diasNoMes(ano - 1, mes);
+    let conta = 0;
+    for (let x = 1; x <= totalAnt; x++) {
+      if (new Date(ano - 1, mes - 1, x).getDay() === diaSemana) {
+        conta += 1;
+        if (conta === ocorrencia) return x;
+      }
+    }
+    return null;
+  };
+
   const dias = [];
-  for (let d = 1; d <= 30; d++) {
-    const ab26 = d26.dias[d] || null;
-    const fine = fine26.dias[d] || null;
+  for (let d = 1; d <= totalDiasMes; d++) {
+    const dAnt = alinhamento === "semana" ? equivalenteAnoAnterior(d) : d;
     dias.push({
       dia: d,
-      "2025": d25.dias[d] || null,
-      "2026": ab26,
-      "Fini": fine,
+      rotulo26: rotuloDia(d),
+      rotulo25: dAnt
+        ? `${String(dAnt).padStart(2, "0")}/${String(mes).padStart(2, "0")}/${ano - 1} · ${DIA_SEMANA[new Date(ano - 1, mes - 1, dAnt).getDay()]}`
+        : null,
+      "2025": dAnt ? d25.dias[dAnt] || null : null,
+      "2026": d26.dias[d] || null,
+      "Fini": fineDoDia(d),
     });
   }
 
@@ -2980,8 +3022,26 @@ function ConsumoAB({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           <div>
             <h2 className="display-font text-2xl font-light">Vendas diárias — {meses[mes - 1]}/{ano}</h2>
             <p className="text-stone-400 text-sm mt-1">
-              Comparativo {ano-1} vs {ano} · dias com registro. Barras lado a lado, dias sem registro ficam vazios.
+              {alinhamento === "semana"
+                ? `Comparativo ${ano-1} vs ${ano} alinhado pela posição na semana: o 2º sábado de ${ano} fica ao lado do 2º sábado de ${ano-1}. O eixo continua sendo o dia de ${ano}.`
+                : `Comparativo ${ano-1} vs ${ano} por dia do mês. O calendário muda de um ano para o outro, então o mesmo número de dia pode ser dia da semana diferente.`}
             </p>
+            <div className="flex gap-1 mt-3">
+              {[["semana", "Mesmo dia da semana"], ["mes", "Mesmo dia do mês"]].map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setAlinhamento(id)}
+                  className="px-3 py-1.5 rounded-md text-xs transition-colors"
+                  style={{
+                    background: alinhamento === id ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
+                    color: alinhamento === id ? "#ef4444" : "#a8a29e",
+                    border: `1px solid ${alinhamento === id ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex gap-4">
             <div className="flex items-center gap-2">
@@ -2994,7 +3054,9 @@ function ConsumoAB({ ano, mes, diaCorte, diaInicio = 1, meses }) {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-sm" style={{ background: "#a855f7" }} />
-              <span className="text-xs text-stone-400">2026 Fini</span>
+              <span className="text-xs text-stone-400">
+                2026 Fini{Object.keys(fine26.dias).length === 0 && fine26.total > 0 ? " (rateio)" : ""}
+              </span>
             </div>
           </div>
         </div>
@@ -3016,8 +3078,13 @@ function ConsumoAB({ ano, mes, diaCorte, diaInicio = 1, meses }) {
                 fontFamily: "Geist Mono",
                 fontSize: 12,
               }}
-              formatter={(v) => (v !== null && v !== undefined ? formatBRL(v) : "—")}
-              labelFormatter={(l) => `Dia ${l}`}
+              formatter={(v, nome, item) => {
+                const p = item?.payload || {};
+                const ref = nome === "2025" ? p.rotulo25 : p.rotulo26;
+                const val = v !== null && v !== undefined ? formatBRL(v) : "—";
+                return [ref ? `${val}  ·  ${ref}` : val, nome];
+              }}
+              labelFormatter={(l) => `${String(l).padStart(2, "0")}/${String(mes).padStart(2, "0")}/${ano}`}
             />
             <Bar dataKey="2025" fill="rgba(120,113,108,0.6)" radius={[3, 3, 0, 0]} />
             <Bar dataKey="2026" stackId="2026" fill="#ef4444" />
