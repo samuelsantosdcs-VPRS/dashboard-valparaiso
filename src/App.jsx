@@ -978,9 +978,20 @@ const META_INDIVIDUAL_VPLUS = {
   "2026-7": 100000.00, // Julho/2026 — meta nova da diretoria
 };
 
-function getMetaIndividualVPlus(ano, mes) {
-  const chave = `${ano}-${mes}`;
-  return META_INDIVIDUAL_VPLUS[chave] || META_INDIVIDUAL_VPLUS_PADRAO;
+// Canais de venda que NÃO são consultores: a receita entra no total do time,
+// mas eles não carregam meta individual e não dividem a meta da equipe.
+// Antes o painel dava a mesma meta a eles e ainda os contava na divisão,
+// o que puxava a meta de todo mundo para baixo.
+const CANAIS_SEM_META_VPLUS = new Set(["Loja Web", "Lislleidy Nunes", "Valparaíso"]);
+
+// Meta individual do mês.
+// Ordem: valor manual da diretoria → meta da equipe dividida pelos consultores
+// que de fato têm meta → padrão antigo (só como último recurso).
+function getMetaIndividualVPlus(ano, mes, qtdConsultores, metaMensal) {
+  const manual = META_INDIVIDUAL_VPLUS[`${ano}-${mes}`];
+  if (manual) return manual;
+  if (metaMensal > 0 && qtdConsultores > 0) return metaMensal / qtdConsultores;
+  return META_INDIVIDUAL_VPLUS_PADRAO;
 }
 
 const getRankingConsultores = (ano, mes) => {
@@ -2214,27 +2225,32 @@ function RankingConsultores({ ano, mes, metaMensal }) {
     const atual = getRankingConsultores(ano, mes);
     const anoAnt = getRankingConsultores(ano - 1, mes);
     const totalMes = atual.reduce((a, b) => a + b.valor, 0);
-    const metaIndividual = getMetaIndividualVPlus(ano, mes); // meta individual por mês
+    const comMeta = atual.filter((p) => !CANAIS_SEM_META_VPLUS.has(p.nome));
+    const metaIndividual = getMetaIndividualVPlus(ano, mes, comMeta.length, metaMensal);
 
     const base = atual.map((p, idx) => {
       const ant = anoAnt.find((a) => a.nome === p.nome);
       const valorAnt = ant ? ant.valor : 0;
       const delta = valorAnt > 0 ? ((p.valor - valorAnt) / valorAnt) * 100 : null;
       const participacao = totalMes > 0 ? (p.valor / totalMes) * 100 : 0;
-      const atingimento = (p.valor / metaIndividual) * 100;
-      return { ...p, rank: idx + 1, valorAnt, delta, participacao, atingimento, metaIndividual };
+      const semMeta = CANAIS_SEM_META_VPLUS.has(p.nome);
+      const atingimento = semMeta ? null : (p.valor / metaIndividual) * 100;
+      return {
+        ...p, rank: idx + 1, valorAnt, delta, participacao, semMeta,
+        atingimento, metaIndividual: semMeta ? null : metaIndividual,
+      };
     });
 
     const maxTicket = Math.max(...base.map((p) => p.ticket_medio));
     const maxDias = Math.max(...base.map((p) => p.dias_ativos));
 
     return base.map((p) => {
-      const tier = getTier(p.atingimento);
+      const tier = getTier(p.atingimento === null ? 0 : p.atingimento);
       const badges = [];
       if (p.rank === 1) badges.push({ id: "lider", icon: "👑", label: "Líder do mês" });
       if (p.rank >= 2 && p.rank <= 3) badges.push({ id: "podio", icon: "🥇", label: "Pódio" });
-      if (p.atingimento >= 150) badges.push({ id: "dobrou", icon: "🏆", label: "Dobrou a meta" });
-      else if (p.atingimento >= 100) badges.push({ id: "meta", icon: "💯", label: "Meta batida" });
+      if (p.atingimento !== null && p.atingimento >= 150) badges.push({ id: "dobrou", icon: "🏆", label: "Dobrou a meta" });
+      else if (p.atingimento !== null && p.atingimento >= 100) badges.push({ id: "meta", icon: "💯", label: "Meta batida" });
       if (p.delta !== null && p.delta > 50) badges.push({ id: "foguete", icon: "🚀", label: "Foguete" });
       if (p.ticket_medio === maxTicket && p.ticket_medio > 0) badges.push({ id: "ticket", icon: "💎", label: "Ticket ouro" });
       if (p.dias_ativos === maxDias && p.dias_ativos > 0) badges.push({ id: "dedicado", icon: "🎯", label: "Mais dedicado" });
@@ -2261,8 +2277,24 @@ function RankingConsultores({ ano, mes, metaMensal }) {
             <h2 className="display-font text-2xl font-light">Ranking de consultores</h2>
           </div>
           <p className="text-stone-400 text-sm">
-            Desempenho individual em {meses[mes - 1]}/{ano} · {ranking.length} consultores ativos · total {formatBRL(totalTime)}
+            Desempenho individual em {meses[mes - 1]}/{ano} · {ranking.length} ativos · total {formatBRL(totalTime)}
           </p>
+          {(() => {
+            const comMeta = ranking.filter((p) => !p.semMeta);
+            const canais = ranking.filter((p) => p.semMeta);
+            if (comMeta.length === 0) return null;
+            const meta = comMeta[0].metaIndividual;
+            const manual = META_INDIVIDUAL_VPLUS[`${ano}-${mes}`];
+            return (
+              <p className="text-stone-500 text-xs mt-1">
+                Meta individual {formatBRL(meta)}
+                {manual
+                  ? " · valor definido pela diretoria"
+                  : ` · meta do time ${formatBRL(metaMensal)} dividida por ${comMeta.length} consultores`}
+                {canais.length > 0 && ` · ${canais.map((c) => c.nome).join(", ")} entra${canais.length > 1 ? "m" : ""} no total mas não divide${canais.length > 1 ? "m" : ""} a meta`}
+              </p>
+            );
+          })()}
         </div>
         <div className="flex gap-2 flex-wrap">
           {/* Toggle de VISÃO */}
@@ -2456,23 +2488,27 @@ function RankingConsultores({ ano, mes, metaMensal }) {
                 ) : (
                   <>
                     <td className="text-right mono-font text-stone-400">
-                      {formatBRL(p.metaIndividual)}
+                      {p.semMeta ? <span className="text-stone-600">sem meta</span> : formatBRL(p.metaIndividual)}
                     </td>
                     <td className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${Math.min(100, p.atingimento)}%`,
-                              background: p.atingimento >= 100 ? "#10b981" : p.atingimento >= 70 ? "#f59e0b" : "#ef4444",
-                            }}
-                          />
+                      {p.semMeta ? (
+                        <span className="text-stone-600 text-xs">canal</span>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${Math.min(100, p.atingimento)}%`,
+                                background: p.atingimento >= 100 ? "#10b981" : p.atingimento >= 70 ? "#f59e0b" : "#ef4444",
+                              }}
+                            />
+                          </div>
+                          <span className="mono-font text-xs text-stone-300 w-10 text-right">
+                            {p.atingimento.toFixed(0)}%
+                          </span>
                         </div>
-                        <span className="mono-font text-xs text-stone-300 w-10 text-right">
-                          {p.atingimento.toFixed(0)}%
-                        </span>
-                      </div>
+                      )}
                     </td>
                   </>
                 )}
