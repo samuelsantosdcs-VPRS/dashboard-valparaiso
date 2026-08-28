@@ -680,9 +680,36 @@ const DADOS_TRAFEGO = {
     status: "verde",
     statusNota: "Fechamento de 01 a 28/08 com R$ 21.734 investidos nas duas plataformas. Meta Ads gerou 421 ingressos e R$ 70.004 de receita atribuída; Google Ads somou 347 conversões em três campanhas. Julho foi mês de férias e não serve de régua, agosto roda num patamar normal de temporada baixa.",
     periodoNota: "Fonte: relatórios mensais Brandes Estratégia de 28/08/2026 (Meta Ads e Google Ads), período 01 a 28/08. Os relatórios NÃO trazem impressões, alcance nem frequência do Meta, então esses indicadores não estão no painel. A receita atribuída é a do gerenciador de anúncios e NÃO foi conferida contra a bilheteria. O relatório do Meta traz dois pares de números para agosto: 421 ingressos / R$ 70.004 nos destaques e 445 ingressos / R$ 72.048,28 na tabela de evolução. Usamos o número dos destaques e pedimos a conciliação à agência.",
+    kpisGerais: {
+      investimentoTotal: 21058.97,
+      ingressos: 421,
+      leadsConversas: 2849,
+      receitaAtribuida: 70004,
+    },
     plataformas: [
-      { nome: "Meta ADS", icone: "\ud83d\udcd8", cpa: 11.95, conversoes: 421, labelConv: "Ingressos", cor: "#1877f2" },
-      { nome: "Google ADS", icone: "\ud83d\udd0d", cpa: 9.86, conversoes: 347, labelConv: "Conversões", cor: "#ea4335" },
+      {
+        nome: "Meta ADS", chave: "Meta", icone: "\ud83d\udcd8", cor: "#1877f2",
+        investido: 17638.71, cpa: 11.95, conversoes: 421, labelConv: "Ingressos",
+        roas: 13.92, roasNota: "sobre a verba de Ingressos",
+        extras: [
+          { label: "ROAS da conta", valor: "3,93x" },
+          { label: "Leads + conversas", valor: "2.849" },
+        ],
+        evolucao: [
+          { mes: "Jun", investido: 22236.13, ingressos: 448, receita: 40434.40, roas: 1.82 },
+          { mes: "Jul", investido: 23474.52, ingressos: 1454, receita: 343785.51, roas: 14.65 },
+          { mes: "Ago", investido: 18313.62, ingressos: 445, receita: 72048.28, roas: 3.93 },
+        ],
+      },
+      {
+        nome: "Google ADS", chave: "Google", icone: "\ud83d\udd0d", cor: "#ea4335",
+        investido: 3420.26, cpa: 9.86, conversoes: 347, labelConv: "Conversões",
+        roas: null, roasNota: "relatório não informa receita",
+        extras: [
+          { label: "CTR institucional", valor: "33,3%" },
+          { label: "Parcela de impressão", valor: "57,1%" },
+        ],
+      },
     ],
     campanhas: [
       { plataforma: "Meta", produto: "Ingressos (site)", objetivo: "Conversão", icone: "\ud83c\udfab", investido: 5029.94, resultado: 421, labelResultado: "ingressos", cpa: 11.95, roas: 13.92, cor: "#1877f2", status: "active" },
@@ -6259,9 +6286,32 @@ function TrafegoView({ ano, mes, meses }) {
   const statusCor = { verde: "#10b981", amarelo: "#eab308", vermelho: "#ef4444" }[dados.status] || "#eab308";
   const statusTxt = { verde: "Saudável", amarelo: "Atenção", vermelho: "Crítico" }[dados.status] || "Atenção";
 
+  const campanhas = dados.campanhas || [];
+  const plataformas = dados.plataformas || [];
+  const otimizacoes = dados.otimizacoes || [];
+
+  // Cada plataforma vira um bloco próprio. O investido vem do campo explícito
+  // quando existe; senão soma as campanhas dela, para os meses antigos.
+  const chaveDe = (p) => p.chave || p.nome.split(" ")[0];
+  const blocos = plataformas.map((p) => {
+    const chave = chaveDe(p);
+    const camps = campanhas.filter((c) => c.plataforma === chave);
+    const investido = p.investido != null ? p.investido : camps.reduce((a, c) => a + (c.investido || 0), 0);
+    const otim = otimizacoes.filter((o) => o.plataforma.toLowerCase().includes(chave.toLowerCase()));
+    return { ...p, chave, campanhas: camps, investido, otimizacoes: otim };
+  });
+  const investidoTotal = dados.kpisGerais?.investimentoTotal ?? blocos.reduce((a, b) => a + b.investido, 0);
+
+  // Otimizações que não pertencem a nenhuma plataforma ficam no rodapé.
+  const chaves = blocos.map((b) => b.chave.toLowerCase());
+  const rodape = otimizacoes.filter((o) => !chaves.some((k) => o.plataforma.toLowerCase().includes(k)));
+
+  const kg = dados.kpisGerais || {};
+
   return (
     <div id="produto-pdf-area">
       <BotoesExportPDF tituloProduto="Trafego_Pago" ano={ano} mes={mes} meses={meses} />
+
       {/* Cabeçalho */}
       <section className="card rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
@@ -6279,157 +6329,225 @@ function TrafegoView({ ano, mes, meses }) {
         </div>
       </section>
 
-      {/* KPIs por plataforma */}
-      <section className="grid md:grid-cols-2 gap-4 mb-6">
-        {dados.plataformas.map((p) => (
-          <div key={p.nome} className="card rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span style={{ fontSize: 20 }}>{p.icone}</span>
-              <span className="text-base font-medium" style={{ color: p.cor }}>{p.nome}</span>
+      {/* 1 · Visão geral */}
+      <section className="card rounded-xl p-6 mb-6">
+        <h3 className="text-sm font-medium text-stone-300 mb-1">Visão geral</h3>
+        <p className="text-stone-500 text-xs mb-4">Consolidado das plataformas no período</p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          {[
+            ["Investido", formatBRL(investidoTotal)],
+            ["Ingressos", (kg.ingressos ?? 0).toLocaleString("pt-BR")],
+            ["Leads + conversas", (kg.leadsConversas ?? 0).toLocaleString("pt-BR")],
+            ["Receita atribuída", kg.receitaAtribuida != null ? formatBRL(kg.receitaAtribuida) : "—"],
+          ].map(([label, valor]) => (
+            <div key={label} className="rounded-lg p-4" style={{ background: "rgba(255,255,255,0.03)" }}>
+              <div className="text-[10px] uppercase tracking-widest text-stone-500">{label}</div>
+              <div className="display-font text-2xl font-light mt-1" style={{ fontVariantNumeric: "tabular-nums" }}>{valor}</div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-[10px] uppercase tracking-widest text-stone-500 mb-1">CPA</div>
-                <div className="display-font text-2xl font-light" style={{ fontVariantNumeric: "tabular-nums" }}>{formatBRL2(p.cpa)}</div>
-                <div className="text-[10px] text-stone-500 mt-1">custo por aquisição</div>
+          ))}
+        </div>
+
+        <div className="text-[10px] uppercase tracking-widest text-stone-500 mb-2">Divisão do investimento</div>
+        <div className="flex h-7 rounded-lg overflow-hidden mb-2">
+          {blocos.map((b) => {
+            const pct = investidoTotal > 0 ? (b.investido / investidoTotal) * 100 : 0;
+            return (
+              <div key={b.nome} className="flex items-center px-3 text-xs font-medium text-white/90"
+                   style={{ width: `${pct}%`, background: b.cor, minWidth: pct > 0 ? 40 : 0 }}>
+                {pct >= 12 ? `${b.chave} ${pct.toFixed(1).replace(".", ",")}%` : ""}
               </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-widest text-stone-500 mb-1">{p.labelConv}</div>
-                <div className="display-font text-2xl font-light" style={{ fontVariantNumeric: "tabular-nums" }}>{p.conversoes.toLocaleString("pt-BR")}</div>
-                <div className="text-[10px] text-stone-500 mt-1">no período</div>
-              </div>
-            </div>
-          </div>
-        ))}
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
+          {blocos.map((b) => (
+            <span key={b.nome} className="text-xs text-stone-400">
+              <span style={{ color: b.cor }}>●</span> {b.nome} {formatBRL(b.investido)} · CPA {formatBRL2(b.cpa)}
+            </span>
+          ))}
+        </div>
       </section>
 
-      {/* Investimento total + por campanha */}
-      {dados.campanhas && (() => {
-        const totalInvest = dados.campanhas.reduce((a, c) => a + c.investido, 0);
-        const totalMeta = dados.campanhas.filter((c) => c.plataforma === "Meta").reduce((a, c) => a + c.investido, 0);
-        const totalGoogle = dados.campanhas.filter((c) => c.plataforma === "Google").reduce((a, c) => a + c.investido, 0);
-        return (
-          <>
-            <section className="card rounded-xl p-6 mb-6">
-              <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
-                <h3 className="text-sm font-medium text-stone-300">Investimento por campanha</h3>
-                <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-widest text-stone-500">Investido no mês</div>
-                  <div className="display-font text-2xl font-light text-cyan-400">{formatBRL2(totalInvest)}</div>
-                  <div className="text-[10px] text-stone-500 mt-1">Meta {formatBRL2(totalMeta)} · Google {formatBRL2(totalGoogle)}</div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-                      <th style={{ textAlign: "left", padding: "8px 10px", color: "#a8a29e", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>Campanha</th>
-                      <th style={{ textAlign: "right", padding: "8px 10px", color: "#a8a29e", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>Investido</th>
-                      <th style={{ textAlign: "right", padding: "8px 10px", color: "#a8a29e", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>Resultado</th>
-                      <th style={{ textAlign: "right", padding: "8px 10px", color: "#a8a29e", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>Custo unit.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dados.campanhas.map((cmp, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                        <td style={{ padding: "10px", color: "#e7e5e4" }}>
-                          <span style={{ marginRight: 6 }}>{cmp.icone}</span>
-                          <span style={{ fontWeight: 500 }}>{cmp.produto}</span>
-                          <span style={{ fontSize: 11, color: cmp.cor, marginLeft: 8 }}>{cmp.plataforma} · {cmp.objetivo}</span>
-                        </td>
-                        <td style={{ textAlign: "right", padding: "10px", fontVariantNumeric: "tabular-nums" }}>{formatBRL2(cmp.investido)}</td>
-                        <td style={{ textAlign: "right", padding: "10px", fontVariantNumeric: "tabular-nums" }}>{cmp.resultado.toLocaleString("pt-BR")} <span style={{ color: "#78716c", fontSize: 11 }}>{cmp.labelResultado}</span></td>
-                        <td style={{ textAlign: "right", padding: "10px", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: cmp.cpa < 10 ? "#10b981" : cmp.cpa < 25 ? "#eab308" : "#ef4444" }}>{formatBRL2(cmp.cpa)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-stone-500 text-xs mt-3">{dados.periodoNota}</p>
-            </section>
-          </>
-        );
-      })()}
+      {/* 2..n · Um bloco por plataforma */}
+      {blocos.map((b) => (
+        <section key={b.nome} className="card rounded-xl p-6 mb-6" style={{ borderLeft: `3px solid ${b.cor}` }}>
+          <div className="flex items-center gap-2 mb-4">
+            <span style={{ fontSize: 20 }}>{b.icone}</span>
+            <span className="text-base font-medium" style={{ color: b.cor }}>{b.nome}</span>
+            <span className="text-xs text-stone-500">· {b.campanhas.length} campanhas</span>
+          </div>
 
-      {/* Otimizações da semana */}
-      {dados.otimizacoes && (
-        <section className="card rounded-xl p-6 mb-6">
-          <h3 className="text-sm font-medium text-stone-300 mb-1">Otimizações realizadas</h3>
-          <p className="text-stone-500 text-xs mb-4">Verificação de {dados.dataVerificacao}</p>
-          <div className="grid md:grid-cols-2 gap-5">
-            {dados.otimizacoes.map((ot) => (
-              <div key={ot.plataforma}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-2 h-2 rounded-full" style={{ background: ot.cor }} />
-                  <span className="text-sm font-medium" style={{ color: ot.cor }}>{ot.plataforma}</span>
-                  {ot.responsavel !== "—" && <span className="text-xs text-stone-500">· {ot.responsavel}</span>}
+          {/* mesmos quatro quadros nas duas plataformas */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            {[
+              ["Investido", formatBRL(b.investido)],
+              [b.labelConv, (b.conversoes ?? 0).toLocaleString("pt-BR")],
+              ["CPA", formatBRL2(b.cpa)],
+              ["ROAS", b.roas != null ? `${b.roas.toFixed(2).replace(".", ",")}x` : "—"],
+            ].map(([label, valor]) => (
+              <div key={label} className="rounded-lg p-4" style={{ background: `${b.cor}0d`, border: `1px solid ${b.cor}26` }}>
+                <div className="text-[10px] uppercase tracking-widest text-stone-500">{label}</div>
+                <div className="display-font text-xl font-light mt-1" style={{ fontVariantNumeric: "tabular-nums" }}>{valor}</div>
+              </div>
+            ))}
+          </div>
+
+          {(b.extras?.length > 0 || b.roasNota) && (
+            <div className="flex flex-wrap gap-x-5 gap-y-1 mb-4 text-xs text-stone-500">
+              {b.roasNota && <span>ROAS {b.roasNota}</span>}
+              {(b.extras || []).map((e) => (
+                <span key={e.label}>{e.label} <span className="text-stone-300">{e.valor}</span></span>
+              ))}
+            </div>
+          )}
+
+          {/* evolução mensal, quando a plataforma manda histórico */}
+          {b.evolucao?.length > 0 && (
+            <div className="mb-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-[10px] uppercase tracking-widest text-stone-500 mb-3">Evolução recente</div>
+              <ResponsiveContainer width="100%" height={180}>
+                <ComposedChart data={b.evolucao} margin={{ top: 5, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="mes" stroke="#78716c" fontSize={11} />
+                  <YAxis yAxisId="l" stroke="#78716c" fontSize={11} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <YAxis yAxisId="r" orientation="right" stroke="#78716c" fontSize={11} tickFormatter={(v) => `${v}x`} />
+                  <Tooltip
+                    contentStyle={{ background: "#1c1917", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
+                    formatter={(v, n) => [n === "ROAS" ? `${v.toFixed(2).replace(".", ",")}x` : formatBRL(v), n]}
+                  />
+                  <Bar yAxisId="l" dataKey="investido" name="Investido" fill={b.cor} radius={[3, 3, 0, 0]} />
+                  <Bar yAxisId="l" dataKey="receita" name="Receita" fill="#10b981" radius={[3, 3, 0, 0]} />
+                  <Line yAxisId="r" type="monotone" dataKey="roas" name="ROAS" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <p className="text-stone-500 text-[11px] mt-2 leading-relaxed">
+                Julho foi pico de férias e distorce a comparação. Contra junho, agosto rendeu mais receita
+                com menos verba.
+              </p>
+            </div>
+          )}
+
+          {/* campanhas da plataforma */}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+            {b.campanhas.map((c) => (
+              <div key={c.produto} className="flex items-center justify-between gap-3 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span style={{ fontSize: 15 }}>{c.icone}</span>
+                  <div className="min-w-0">
+                    <div className="text-sm text-stone-100 truncate">{c.produto}</div>
+                    <div className="text-[11px] text-stone-500">{c.objetivo}</div>
+                  </div>
                 </div>
-                <ul className="space-y-2">
+                <div className="flex gap-5 text-right shrink-0">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest text-stone-500">Investido</div>
+                    <div className="mono-font text-sm text-stone-200">{formatBRL(c.investido)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest text-stone-500">{c.labelResultado}</div>
+                    <div className="mono-font text-sm text-stone-200">{c.resultado.toLocaleString("pt-BR")}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest text-stone-500">Custo unit.</div>
+                    <div className="mono-font text-sm text-stone-200">{formatBRL2(c.cpa)}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* otimizações da própria plataforma */}
+          {b.otimizacoes.length > 0 && (
+            <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-[10px] uppercase tracking-widest text-stone-500 mb-3">
+                Otimizações · {b.otimizacoes[0].responsavel}
+              </div>
+              {b.otimizacoes.map((ot) => (
+                <ul key={ot.plataforma} className="space-y-2">
                   {ot.acoes.map((a, i) => (
                     <li key={i} className="text-xs text-stone-300 leading-relaxed flex gap-2">
-                      <span style={{ color: ot.cor }}>•</span>
+                      <span style={{ color: b.cor }}>•</span>
                       <span>{a}</span>
                     </li>
                   ))}
                 </ul>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
+
+      {/* Criativos */}
+      {dados.criativos?.length > 0 && (
+        <section className="card rounded-xl p-6 mb-6">
+          <h3 className="text-sm font-medium text-stone-300 mb-1">Criativos com melhor desempenho</h3>
+          <p className="text-stone-500 text-xs mb-4">Ordenado por ROAS</p>
+          <div className="space-y-3">
+            {[...dados.criativos].sort((a, b) => (b.roas || 0) - (a.roas || 0)).map((cr) => (
+              <div key={cr.nome} className="rounded-lg p-4" style={{ background: "rgba(6,182,212,0.05)", border: "1px solid rgba(6,182,212,0.15)" }}>
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <div className="text-base font-medium text-stone-100">{cr.nome}</div>
+                    <div className="text-[11px] text-stone-500">{cr.campanha}</div>
+                  </div>
+                  <div className="flex gap-6">
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase tracking-widest text-stone-500">ROAS</div>
+                      <div className="display-font text-xl font-light text-emerald-400" style={{ fontVariantNumeric: "tabular-nums" }}>{cr.roas != null ? cr.roas.toFixed(2).replace(".", ",") + "x" : "—"}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase tracking-widest text-stone-500">CPA</div>
+                      <div className="display-font text-xl font-light" style={{ fontVariantNumeric: "tabular-nums" }}>{formatBRL2(cr.cpa)}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
-        </section>
-      )}
 
-      {/* Criativos top */}
-      <section className="card rounded-xl p-6">
-        <h3 className="text-sm font-medium text-stone-300 mb-1">Criativos com melhor desempenho</h3>
-        <p className="text-stone-500 text-xs mb-4">Últimos 7 dias · ordenado por ROAS</p>
-        <div className="space-y-3">
-          {[...dados.criativos].sort((a, b) => b.roas - a.roas).map((cr) => (
-            <div key={cr.nome} className="rounded-lg p-4" style={{ background: "rgba(6,182,212,0.05)", border: "1px solid rgba(6,182,212,0.15)" }}>
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <div className="text-base font-medium text-stone-100">{cr.nome}</div>
-                  <a href={cr.url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 hover:underline">ver criativo ↗</a>
-                </div>
-                <div className="flex gap-6">
-                  <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-widest text-stone-500">ROAS</div>
-                    <div className="display-font text-xl font-light text-emerald-400" style={{ fontVariantNumeric: "tabular-nums" }}>{cr.roas != null ? cr.roas.toFixed(2) + "x" : "—"}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-widest text-stone-500">CPA</div>
-                    <div className="display-font text-xl font-light" style={{ fontVariantNumeric: "tabular-nums" }}>{formatBRL2(cr.cpa)}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-stone-500 text-xs mt-4 leading-relaxed">
-          ROAS = retorno sobre investimento em anúncio (receita ÷ gasto). Acima de 1x já é lucrativo;
-          a Tirolesa a {dados.criativos[0]?.roas != null ? dados.criativos[0].roas.toFixed(1) + "x" : "—"} está retornando {dados.criativos[0]?.roas != null ? dados.criativos[0].roas.toFixed(0) + "×" : "—"} o investido.
-        </p>
-
-        {dados.criativosNovos && dados.criativosNovos.length > 0 && (
-          <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            <h3 className="text-sm font-medium text-stone-300 mb-1">Novos criativos no ar</h3>
-            <p className="text-stone-500 text-xs mb-3">Subidos na otimização · métricas ainda em consolidação</p>
-            <div className="grid sm:grid-cols-2 gap-3">
-              {dados.criativosNovos.map((cr) => (
-                <div key={cr.nome} className="rounded-lg p-3 flex items-center justify-between" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div>
+          {dados.criativosNovos?.length > 0 && (
+            <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+              <h3 className="text-sm font-medium text-stone-300 mb-1">Novos criativos no ar</h3>
+              <p className="text-stone-500 text-xs mb-3">Subidos na otimização · métricas ainda em consolidação</p>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {dados.criativosNovos.map((cr) => (
+                  <div key={cr.nome} className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <div className="text-sm font-medium text-stone-100">{cr.nome}</div>
                     <div className="text-[11px] text-stone-500">{cr.campanha}</div>
                   </div>
-                  <a href={cr.url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 hover:underline whitespace-nowrap ml-3">ver ↗</a>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+          )}
+        </section>
+      )}
+
+      {/* Pontos a cobrar e demais notas */}
+      {rodape.length > 0 && rodape.map((ot) => (
+        <section key={ot.plataforma} className="card rounded-xl p-6 mb-6" style={{ borderLeft: `3px solid ${ot.cor}` }}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full" style={{ background: ot.cor }} />
+            <span className="text-sm font-medium" style={{ color: ot.cor }}>{ot.plataforma}</span>
+            {ot.responsavel !== "—" && <span className="text-xs text-stone-500">· {ot.responsavel}</span>}
           </div>
-        )}
-      </section>
+          <ul className="space-y-2">
+            {ot.acoes.map((a, i) => (
+              <li key={i} className="text-xs text-stone-300 leading-relaxed flex gap-2">
+                <span style={{ color: ot.cor }}>•</span>
+                <span>{a}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      {dados.periodoNota && (
+        <p className="text-stone-500 text-xs leading-relaxed">{dados.periodoNota}</p>
+      )}
     </div>
   );
 }
+
 
 function VisaoPeriodo({ dataInicio, dataFim, meses }) {
   // Produtos com série diária (suportam recorte por data)
