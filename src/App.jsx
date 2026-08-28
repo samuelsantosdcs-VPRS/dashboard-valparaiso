@@ -230,16 +230,20 @@ const OVERRIDES_DIRETORIA = {
     total: 5555468.96,
   },
   "2025-8": {
+    // Base corrigida em 28/08/2026 pela planilha oficial de metas.
+    // A base anterior estava sem o Quiosque Ilha e com o Corporativo
+    // subestimado, o que puxava a meta de 2026 para baixo.
     produtos: {
-      acesso: 19309,
-      bilheteria_park: 213180.8,
+      acesso: 29739,
+      bilheteria_park: 213228.80,
       bilheteria_online: 119341.53,
-      assinaturas: 466291.35,
-      passaporte_corp: 76275.7,
-      consumo: 1086913.74,
+      quiosque_ilha: 62857.50,
+      assinaturas: 466529.29,
+      passaporte_corp: 107615.52,
+      consumo: 1090107.76,
       eventos: 152362.57,
     },
-    total: 2114365.69,
+    total: 2212042.97,
   },
   "2025-9": {
     produtos: {
@@ -6333,7 +6337,7 @@ function TrafegoView({ ano, mes, meses }) {
       <section className="card rounded-xl p-6 mb-6">
         <h3 className="text-sm font-medium text-stone-300 mb-1">Visão geral</h3>
         <p className="text-stone-500 text-xs mb-4">Consolidado das plataformas no período</p>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <div className="mb-5" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
           {[
             ["Investido", formatBRL(investidoTotal)],
             ["Ingressos", (kg.ingressos ?? 0).toLocaleString("pt-BR")],
@@ -6368,35 +6372,39 @@ function TrafegoView({ ano, mes, meses }) {
         </div>
       </section>
 
-      {/* 2..n · Um bloco por plataforma */}
+      {/* 2..n · Um bloco por plataforma, lado a lado a partir de lg */}
+      <div className="mb-6" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24, alignItems: "start" }}>
       {blocos.map((b) => (
-        <section key={b.nome} className="card rounded-xl p-6 mb-6" style={{ borderLeft: `3px solid ${b.cor}` }}>
+        <section key={b.nome} className="card rounded-xl p-5" style={{ borderLeft: `3px solid ${b.cor}` }}>
           <div className="flex items-center gap-2 mb-4">
-            <span style={{ fontSize: 20 }}>{b.icone}</span>
+            <span style={{ fontSize: 18 }}>{b.icone}</span>
             <span className="text-base font-medium" style={{ color: b.cor }}>{b.nome}</span>
-            <span className="text-xs text-stone-500">· {b.campanhas.length} campanhas</span>
+            <span className="text-xs text-stone-500 ml-auto">{b.campanhas.length} campanhas</span>
           </div>
 
           {/* mesmos quatro quadros nas duas plataformas */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="mb-4" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
             {[
               ["Investido", formatBRL(b.investido)],
               [b.labelConv, (b.conversoes ?? 0).toLocaleString("pt-BR")],
               ["CPA", formatBRL2(b.cpa)],
               ["ROAS", b.roas != null ? `${b.roas.toFixed(2).replace(".", ",")}x` : "—"],
             ].map(([label, valor]) => (
-              <div key={label} className="rounded-lg p-4" style={{ background: `${b.cor}0d`, border: `1px solid ${b.cor}26` }}>
-                <div className="text-[10px] uppercase tracking-widest text-stone-500">{label}</div>
+              <div key={label} className="rounded-lg p-3" style={{ background: `${b.cor}0d`, border: `1px solid ${b.cor}26` }}>
+                <div className="text-[10px] uppercase tracking-widest text-stone-500 truncate">{label}</div>
                 <div className="display-font text-xl font-light mt-1" style={{ fontVariantNumeric: "tabular-nums" }}>{valor}</div>
               </div>
             ))}
           </div>
 
           {(b.extras?.length > 0 || b.roasNota) && (
-            <div className="flex flex-wrap gap-x-5 gap-y-1 mb-4 text-xs text-stone-500">
-              {b.roasNota && <span>ROAS {b.roasNota}</span>}
+            <div className="mb-4 text-xs text-stone-500 space-y-1">
+              {b.roasNota && <div>ROAS {b.roasNota}</div>}
               {(b.extras || []).map((e) => (
-                <span key={e.label}>{e.label} <span className="text-stone-300">{e.valor}</span></span>
+                <div key={e.label} className="flex justify-between">
+                  <span>{e.label}</span>
+                  <span className="text-stone-300 mono-font">{e.valor}</span>
+                </div>
               ))}
             </div>
           )}
@@ -6405,12 +6413,12 @@ function TrafegoView({ ano, mes, meses }) {
           {b.evolucao?.length > 0 && (
             <div className="mb-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="text-[10px] uppercase tracking-widest text-stone-500 mb-3">Evolução recente</div>
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={150}>
                 <ComposedChart data={b.evolucao} margin={{ top: 5, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="mes" stroke="#78716c" fontSize={11} />
-                  <YAxis yAxisId="l" stroke="#78716c" fontSize={11} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <YAxis yAxisId="r" orientation="right" stroke="#78716c" fontSize={11} tickFormatter={(v) => `${v}x`} />
+                  <XAxis dataKey="mes" stroke="#78716c" fontSize={10} />
+                  <YAxis yAxisId="l" stroke="#78716c" fontSize={10} width={34} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <YAxis yAxisId="r" orientation="right" stroke="#78716c" fontSize={10} width={30} tickFormatter={(v) => `${v}x`} />
                   <Tooltip
                     contentStyle={{ background: "#1c1917", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
                     formatter={(v, n) => [n === "ROAS" ? `${v.toFixed(2).replace(".", ",")}x` : formatBRL(v), n]}
@@ -6430,26 +6438,24 @@ function TrafegoView({ ano, mes, meses }) {
           {/* campanhas da plataforma */}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
             {b.campanhas.map((c) => (
-              <div key={c.produto} className="flex items-center justify-between gap-3 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span style={{ fontSize: 15 }}>{c.icone}</span>
-                  <div className="min-w-0">
-                    <div className="text-sm text-stone-100 truncate">{c.produto}</div>
-                    <div className="text-[11px] text-stone-500">{c.objetivo}</div>
-                  </div>
+              <div key={c.produto} className="py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span style={{ fontSize: 14 }}>{c.icone}</span>
+                  <span className="text-sm text-stone-100 truncate">{c.produto}</span>
+                  <span className="text-[10px] text-stone-500 shrink-0">· {c.objetivo}</span>
                 </div>
-                <div className="flex gap-5 text-right shrink-0">
+                <div className="pl-6" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                   <div>
-                    <div className="text-[10px] uppercase tracking-widest text-stone-500">Investido</div>
-                    <div className="mono-font text-sm text-stone-200">{formatBRL(c.investido)}</div>
+                    <div className="text-[9px] uppercase tracking-widest text-stone-600">Investido</div>
+                    <div className="mono-font text-xs text-stone-200">{formatBRL(c.investido)}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-widest text-stone-500">{c.labelResultado}</div>
-                    <div className="mono-font text-sm text-stone-200">{c.resultado.toLocaleString("pt-BR")}</div>
+                    <div className="text-[9px] uppercase tracking-widest text-stone-600 truncate">{c.labelResultado}</div>
+                    <div className="mono-font text-xs text-stone-200">{c.resultado.toLocaleString("pt-BR")}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-widest text-stone-500">Custo unit.</div>
-                    <div className="mono-font text-sm text-stone-200">{formatBRL2(c.cpa)}</div>
+                    <div className="text-[9px] uppercase tracking-widest text-stone-600">Custo unit.</div>
+                    <div className="mono-font text-xs text-stone-200">{formatBRL2(c.cpa)}</div>
                   </div>
                 </div>
               </div>
@@ -6476,6 +6482,7 @@ function TrafegoView({ ano, mes, meses }) {
           )}
         </section>
       ))}
+      </div>
 
       {/* Criativos */}
       {dados.criativos?.length > 0 && (
@@ -6509,7 +6516,7 @@ function TrafegoView({ ano, mes, meses }) {
             <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
               <h3 className="text-sm font-medium text-stone-300 mb-1">Novos criativos no ar</h3>
               <p className="text-stone-500 text-xs mb-3">Subidos na otimização · métricas ainda em consolidação</p>
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
                 {dados.criativosNovos.map((cr) => (
                   <div key={cr.nome} className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <div className="text-sm font-medium text-stone-100">{cr.nome}</div>
