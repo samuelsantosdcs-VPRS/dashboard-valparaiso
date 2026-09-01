@@ -460,19 +460,32 @@ function getDiasParqueAberto(ano, mes) {
 // editar mais o "total" manualmente.
 // ============================================================
 
-// Soma todos os produtos em R$ (acesso é contagem, não soma)
-function calcularTotalOverride(anoMes) {
+// Produtos do mês, já com a fonte viva por cima.
+// Quando a planilha do V+ está ligada para o mês, o valor dela manda: ela é
+// a fonte, e o número gravado aqui vira apenas reserva para quando a
+// planilha estiver fora do ar.
+function produtosDoMes(anoMes) {
   const ov = OVERRIDES_DIRETORIA[anoMes];
   if (!ov || !ov.produtos) return null;
-  
+  const partes = anoMes.split("-");
+  const externo = totalVPlusExterno(parseInt(partes[0], 10), parseInt(partes[1], 10));
+  if (externo === null || externo === undefined) return ov.produtos;
+  return { ...ov.produtos, assinaturas: externo };
+}
+
+// Soma todos os produtos em R$ (acesso é contagem, não soma)
+function calcularTotalOverride(anoMes) {
+  const produtos = produtosDoMes(anoMes);
+  if (!produtos) return null;
+
   const produtosReceita = [
     "bilheteria_park", "bilheteria_online", "quiosque_ilha", "quiosque_rio_anil",
     "assinaturas", "passaporte_corp", "consumo", "eventos"
   ];
-  
+
   let total = 0;
   produtosReceita.forEach(pid => {
-    const v = ov.produtos[pid];
+    const v = produtos[pid];
     if (typeof v === "number") total += v;
   });
   return total;
@@ -1320,15 +1333,18 @@ export default function App() {
     }
     const hora = VPLUS_EXTERNO.atualizadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const totalPlanilha = totalVPlusExterno(ano, mes);
-    const totalPainel = OVERRIDES_DIRETORIA[`${ano}-${mes}`]?.produtos?.assinaturas;
-    const divergente =
-      totalPlanilha != null && totalPainel != null && Math.abs(totalPlanilha - totalPainel) > 0.5;
-    return {
-      cor: divergente ? "#f59e0b" : "#10b981",
-      texto: divergente
-        ? `V+ lido da planilha às ${hora}: ${formatBRL(totalPlanilha)} em ${VPLUS_EXTERNO.linhas} lançamentos. O total gravado no painel é ${formatBRL(totalPainel)}, diferença de ${formatBRL(Math.abs(totalPlanilha - totalPainel))}.`
-        : `V+ atualizado pela planilha às ${hora} · ${formatBRL(totalPlanilha)} em ${VPLUS_EXTERNO.linhas} lançamentos`,
-    };
+    const reserva = OVERRIDES_DIRETORIA[`${ano}-${mes}`]?.produtos?.assinaturas;
+    const dif = totalPlanilha != null && reserva != null ? totalPlanilha - reserva : 0;
+    const base = `V+ pela planilha às ${hora} · ${formatBRL(totalPlanilha)} em ${VPLUS_EXTERNO.linhas} lançamentos`;
+    // A planilha é a fonte; o número no código é reserva. Se a reserva ficou
+    // para trás, isso é só informativo, não é erro.
+    if (Math.abs(dif) > 0.5) {
+      return {
+        cor: "#10b981",
+        texto: `${base} · o painel está usando este valor. A reserva gravada no código (${formatBRL(reserva)}) está ${dif > 0 ? "atrás" : "à frente"} em ${formatBRL(Math.abs(dif))}.`,
+      };
+    }
+    return { cor: "#10b981", texto: base };
   })();
 
   // ── MODO DE VISÃO: "mensal" (padrão) ou "periodo" (range livre de datas) ──
@@ -6359,7 +6375,7 @@ function toInputDate(d) {
 function getReceitaMes(produtoId, ano, mes) {
   const key = `${ano}-${mes}`;
   const overrideMes = OVERRIDES_DIRETORIA[key];
-  const overrideProduto = overrideMes?.produtos?.[produtoId];
+  const overrideProduto = produtosDoMes(key)?.[produtoId];
 
   // Se tem override oficial, ele tem prioridade absoluta
   if (overrideProduto !== undefined && overrideProduto !== null) {
@@ -7008,8 +7024,7 @@ function VisaoExecutiva({ ano, mes, diaCorte, diaInicio = 1, meses, setProdutoId
   // Busca dado oficial OU do CSV
   const getDadoProduto = (ano, mes, produtoId) => {
     const chave = `${ano}-${mes}`;
-    const ov = OVERRIDES_DIRETORIA[chave];
-    const valor = ov?.produtos?.[produtoId];
+    const valor = produtosDoMes(chave)?.[produtoId];
     if (valor !== undefined) {
       return { valor, temDados: true, ehOficial: true };
     }
