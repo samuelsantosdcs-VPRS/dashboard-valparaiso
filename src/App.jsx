@@ -1067,7 +1067,13 @@ async function carregarVPlusExterno() {
   if (!FONTE_VPLUS.ativo || VPLUS_EXTERNO.carregando) return false;
   VPLUS_EXTERNO.carregando = true;
   try {
-    const resp = await fetch(FONTE_VPLUS.url, { cache: "no-store" });
+    // O parâmetro de tempo derruba cache de navegador e de CDN intermediário.
+    // O cache do próprio Google no CSV publicado (~5 min) não tem como burlar.
+    const sep = FONTE_VPLUS.url.includes("?") ? "&" : "?";
+    const resp = await fetch(`${FONTE_VPLUS.url}${sep}_=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const linhas = parseCSV(await resp.text());
     if (linhas.length < 2) throw new Error("planilha vazia");
@@ -1322,9 +1328,17 @@ export default function App() {
       if (vivo) setVersaoDados((v) => v + 1);
     };
     puxar();
-    const t = setInterval(puxar, 5 * 60 * 1000);
+    const t = setInterval(puxar, 2 * 60 * 1000);
     return () => { vivo = false; clearInterval(t); };
   }, []);
+
+  const [recarregando, setRecarregando] = useState(false);
+  const recarregarPlanilha = async () => {
+    setRecarregando(true);
+    await carregarVPlusExterno();
+    setVersaoDados((v) => v + 1);
+    setRecarregando(false);
+  };
 
   // Aviso do estado da fonte externa, exibido só quando ela está ligada.
   const avisoFonte = (() => {
@@ -1762,7 +1776,20 @@ export default function App() {
           style={{ background: `${avisoFonte.cor}12`, border: `1px solid ${avisoFonte.cor}33` }}
         >
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: avisoFonte.cor }} />
-          <span className="text-xs" style={{ color: avisoFonte.cor }}>{avisoFonte.texto}</span>
+          <span className="text-xs flex-1" style={{ color: avisoFonte.cor }}>{avisoFonte.texto}</span>
+          <button
+            onClick={recarregarPlanilha}
+            disabled={recarregando}
+            className="text-[10px] uppercase tracking-widest px-2 py-1 rounded shrink-0"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: `1px solid ${avisoFonte.cor}44`,
+              color: avisoFonte.cor,
+              opacity: recarregando ? 0.5 : 1,
+            }}
+          >
+            {recarregando ? "Lendo..." : "Reler agora"}
+          </button>
         </div>
       )}
 
