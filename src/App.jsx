@@ -943,8 +943,201 @@ const formatPct = (v) => v != null ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%` : "�
 const diasNoMes = (ano, mes) => new Date(ano, mes, 0).getDate();
 
 // Retorna a série do mês: array de {dia, valor, meta} com 0 pra dias não preenchidos
+// ============================================================
+// FONTE EXTERNA — Assinaturas V+ via Google Sheets publicado
+// ------------------------------------------------------------
+// A planilha é alimentada com o export do Multiclubes e publicada em
+// CSV. Vem linha a linha, uma por lançamento, já normalizada:
+//   competencia | data_pagamento | consultor | valor_pago | quantidade
+// O painel agrega sozinho, então não é preciso manter abas de resumo.
+// Regras:
+//  · só vale para os meses listados em `meses`; histórico fechado
+//    continua vindo do código, para não mudar sozinho;
+//  · se a busca falhar, o painel usa os valores gravados e avisa;
+//  · nada aqui bloqueia a renderização.
+// ============================================================
+const FONTE_VPLUS = {
+  ativo: true,
+  meses: ["2026-8"],
+  url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=941178592&single=true&output=csv",
+};
+
+// O Multiclubes grava o nome completo em caixa alta. O painel usa nomes
+// curtos, e é por eles que o comparativo com o ano anterior encontra a
+// pessoa. Nome que não estiver aqui entra em Capitalizado.
+const NOMES_VPLUS = {
+  "CAROL SIQUEIRA": "Carol",
+  "JARDSON FRAZAO SANTANA": "Jardson",
+  "KLEUSO MARQUES DA LUZ": "Kleuso",
+  "JAILSON NASCIMENTO": "Jailson",
+  "DANIELE BARROSO": "Daniele",
+  "DARLENE SILVA": "Darlene",
+  "RODRIGO PEIXOTO": "Rodrigo Peixoto",
+  "JULIANA REIS": "Juliana Reis",
+  "ANA CAROLINA": "Ana Carolina",
+  "ANA LUIZA": "Ana Luiza",
+  "DAVID COQUEIRO": "David Coqueiro",
+  "LISLLEIDY NUNES": "Lislleidy Nunes",
+  "VALPARAÍSO": "Loja Web",
+  "VALPARAISO": "Loja Web",
+  CIBELLE: "Cibelle",
+  VALTEMIR: "Valtemir",
+  GEODSON: "Geodson",
+  ELINALDO: "Elinaldo",
+  WILLAMY: "Willamy",
+};
+
+const nomeCurtoVPlus = (bruto) => {
+  const t = String(bruto || "").trim();
+  if (!t) return "";
+  if (NOMES_VPLUS[t.toUpperCase()]) return NOMES_VPLUS[t.toUpperCase()];
+  return t
+    .toLowerCase()
+    .split(/\s+/)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ");
+};
+
+const VPLUS_EXTERNO = {
+  diario: null,        // { "2026-8": [[dia, valor, meta], ...] }
+  consultores: null,   // { "2026-8": [[nome, valor, qtd], ...] }
+  linhas: 0,
+  atualizadoEm: null,
+  erro: null,
+  carregando: false,
+};
+
+const usaFonteExterna = (ano, mes) =>
+  FONTE_VPLUS.ativo && FONTE_VPLUS.meses.includes(`${ano}-${mes}`);
+
+// Parser de CSV tolerante: aceita vírgula ou ponto e vírgula, campos com
+// aspas e quebra de linha dentro do campo.
+function parseCSV(texto) {
+  const linhas = texto.replace(/\r/g, "").split("\n").filter((l) => l.trim() !== "");
+  if (linhas.length === 0) return [];
+  const sep = (linhas[0].match(/;/g) || []).length > (linhas[0].match(/,/g) || []).length ? ";" : ",";
+  return linhas.map((linha) => {
+    const campos = [];
+    let atual = "";
+    let dentroAspas = false;
+    for (let i = 0; i < linha.length; i++) {
+      const ch = linha[i];
+      if (ch === '"') {
+        if (dentroAspas && linha[i + 1] === '"') { atual += '"'; i++; }
+        else dentroAspas = !dentroAspas;
+      } else if (ch === sep && !dentroAspas) {
+        campos.push(atual); atual = "";
+      } else atual += ch;
+    }
+    campos.push(atual);
+    return campos.map((c) => c.trim());
+  });
+}
+
+// "R$ 2.292,26" → 2292.26 · "-R$ 32,67" → -32.67 · "1234.56" → 1234.56
+function paraNumero(bruto) {
+  if (bruto == null) return 0;
+  let t = String(bruto).replace(/R\$/gi, "").replace(/\s/g, "").trim();
+  if (t === "" || t === "-") return 0;
+  const negativo = t.startsWith("-");
+  if (negativo) t = t.slice(1);
+  const temVirgula = t.includes(",");
+  const temPonto = t.includes(".");
+  if (temVirgula && temPonto) t = t.replace(/\./g, "").replace(",", ".");
+  else if (temVirgula) t = t.replace(",", ".");
+  const n = parseFloat(t);
+  if (!Number.isFinite(n)) return 0;
+  return negativo ? -n : n;
+}
+
+async function carregarVPlusExterno() {
+  if (!FONTE_VPLUS.ativo || VPLUS_EXTERNO.carregando) return false;
+  VPLUS_EXTERNO.carregando = true;
+  try {
+    const resp = await fetch(FONTE_VPLUS.url, { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const linhas = parseCSV(await resp.text());
+    if (linhas.length < 2) throw new Error("planilha vazia");
+
+    const cab = linhas[0].map((h) => h.toLowerCase());
+    const col = (nome) => cab.indexOf(nome);
+    const iComp = col("competencia");
+    const iData = col("data_pagamento");
+    const iCons = col("consultor");
+    const iValor = col("valor_pago");
+    const iQtd = col("quantidade");
+    if (iComp < 0 || iData < 0 || iCons < 0 || iValor < 0) {
+      throw new Error("colunas esperadas não encontradas");
+    }
+
+    const diario = {};
+    const consultores = {};
+    let usadas = 0;
+
+    for (const chave of FONTE_VPLUS.meses) {
+      const [ano, mes] = chave.split("-").map(Number);
+      const comp = `${ano}-${String(mes).padStart(2, "0")}`;
+      const porDia = new Map();
+      const porPessoa = new Map();
+
+      for (let i = 1; i < linhas.length; i++) {
+        const l = linhas[i];
+        if ((l[iComp] || "").trim() !== comp) continue;
+        const md = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((l[iData] || "").trim());
+        if (!md) continue;
+        const dia = parseInt(md[1], 10);
+        const valor = paraNumero(l[iValor]);
+        const qtd = iQtd >= 0 ? paraNumero(l[iQtd]) : 0;
+        const nome = nomeCurtoVPlus(l[iCons]);
+        if (!nome) continue;
+
+        porDia.set(dia, (porDia.get(dia) || 0) + valor);
+        const atual = porPessoa.get(nome) || [0, 0];
+        porPessoa.set(nome, [atual[0] + valor, atual[1] + qtd]);
+        usadas += 1;
+      }
+
+      if (porDia.size > 0) {
+        diario[chave] = [...porDia.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([d, v]) => [d, Math.round(v * 100) / 100, 5]);
+      }
+      if (porPessoa.size > 0) {
+        consultores[chave] = [...porPessoa.entries()]
+          .map(([n, [v, q]]) => [n, Math.round(v * 100) / 100, Math.round(q)])
+          .sort((a, b) => b[1] - a[1]);
+      }
+    }
+
+    if (usadas === 0) throw new Error("nenhuma linha na competência configurada");
+
+    VPLUS_EXTERNO.diario = Object.keys(diario).length ? diario : null;
+    VPLUS_EXTERNO.consultores = Object.keys(consultores).length ? consultores : null;
+    VPLUS_EXTERNO.linhas = usadas;
+    VPLUS_EXTERNO.atualizadoEm = new Date();
+    VPLUS_EXTERNO.erro = null;
+    return true;
+  } catch (e) {
+    VPLUS_EXTERNO.erro = e.message || "falha ao ler a planilha";
+    return false;
+  } finally {
+    VPLUS_EXTERNO.carregando = false;
+  }
+}
+
+// Total do mês vindo da planilha, para conferir contra o OVERRIDES_DIRETORIA.
+function totalVPlusExterno(ano, mes) {
+  if (!usaFonteExterna(ano, mes)) return null;
+  const c = VPLUS_EXTERNO.consultores?.[`${ano}-${mes}`];
+  if (c) return c.reduce((a, b) => a + b[1], 0);
+  const d = VPLUS_EXTERNO.diario?.[`${ano}-${mes}`];
+  if (d) return d.reduce((a, b) => a + b[1], 0);
+  return null;
+}
+
 const getSerie = (ano, mes) => {
-  const dados = DADOS_ASSINATURAS[`${ano}-${mes}`] || [];
+  const externo = usaFonteExterna(ano, mes) ? VPLUS_EXTERNO.diario?.[`${ano}-${mes}`] : null;
+  const dados = externo || DADOS_ASSINATURAS[`${ano}-${mes}`] || [];
   const dias = diasNoMes(ano, mes);
   const serie = [];
   for (let d = 1; d <= dias; d++) {
@@ -1042,7 +1235,8 @@ function getMetaIndividualVPlus(ano, mes, qtdConsultores, metaMensal) {
 }
 
 const getRankingConsultores = (ano, mes) => {
-  const lista = DADOS_PROMOTORES[`${ano}-${mes}`] || [];
+  const externo = usaFonteExterna(ano, mes) ? VPLUS_EXTERNO.consultores?.[`${ano}-${mes}`] : null;
+  const lista = externo || DADOS_PROMOTORES[`${ano}-${mes}`] || [];
   return lista
     .filter(([nome]) => !CONSULTORES_EXCLUIDOS.has(nome))
     .map(([nome, valor, dias]) => ({
@@ -1056,7 +1250,8 @@ const getRankingConsultores = (ano, mes) => {
 
 // Busca valor de um consultor específico em um período
 const getValorConsultor = (ano, mes, nome) => {
-  const lista = DADOS_PROMOTORES[`${ano}-${mes}`] || [];
+  const externo = usaFonteExterna(ano, mes) ? VPLUS_EXTERNO.consultores?.[`${ano}-${mes}`] : null;
+  const lista = externo || DADOS_PROMOTORES[`${ano}-${mes}`] || [];
   const found = lista.find(([n]) => n === nome);
   return found ? found[1] : 0;
 };
@@ -1095,6 +1290,46 @@ export default function App() {
   });
   // Alias de compatibilidade: diaCorte = fim do período
   const diaCorte = diaFim;
+
+  // Fonte externa do V+: busca a planilha publicada no carregamento e a cada
+  // 5 minutos. O incremento de `versaoDados` força o redesenho depois do fetch.
+  const [versaoDados, setVersaoDados] = useState(0);
+  useEffect(() => {
+    if (!FONTE_VPLUS.ativo) return;
+    let vivo = true;
+    const puxar = async () => {
+      await carregarVPlusExterno();
+      if (vivo) setVersaoDados((v) => v + 1);
+    };
+    puxar();
+    const t = setInterval(puxar, 5 * 60 * 1000);
+    return () => { vivo = false; clearInterval(t); };
+  }, []);
+
+  // Aviso do estado da fonte externa, exibido só quando ela está ligada.
+  const avisoFonte = (() => {
+    if (!FONTE_VPLUS.ativo || !usaFonteExterna(ano, mes)) return null;
+    if (VPLUS_EXTERNO.erro) {
+      return {
+        cor: "#f59e0b",
+        texto: `Planilha do V+ indisponível (${VPLUS_EXTERNO.erro}). Exibindo os últimos valores gravados no painel.`,
+      };
+    }
+    if (!VPLUS_EXTERNO.atualizadoEm) {
+      return { cor: "#78716c", texto: "Lendo a planilha do V+..." };
+    }
+    const hora = VPLUS_EXTERNO.atualizadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const totalPlanilha = totalVPlusExterno(ano, mes);
+    const totalPainel = OVERRIDES_DIRETORIA[`${ano}-${mes}`]?.produtos?.assinaturas;
+    const divergente =
+      totalPlanilha != null && totalPainel != null && Math.abs(totalPlanilha - totalPainel) > 0.5;
+    return {
+      cor: divergente ? "#f59e0b" : "#10b981",
+      texto: divergente
+        ? `V+ lido da planilha às ${hora}: ${formatBRL(totalPlanilha)} em ${VPLUS_EXTERNO.linhas} lançamentos. O total gravado no painel é ${formatBRL(totalPainel)}, diferença de ${formatBRL(Math.abs(totalPlanilha - totalPainel))}.`
+        : `V+ atualizado pela planilha às ${hora} · ${formatBRL(totalPlanilha)} em ${VPLUS_EXTERNO.linhas} lançamentos`,
+    };
+  })();
 
   // ── MODO DE VISÃO: "mensal" (padrão) ou "periodo" (range livre de datas) ──
   const [modoVisao, setModoVisao] = useState("mensal");
@@ -1483,6 +1718,18 @@ export default function App() {
 
         <div className="accent-line mt-6" />
       </header>
+
+      {/* Estado da fonte externa do V+ */}
+      {avisoFonte && (
+        <div
+          key={versaoDados}
+          className="mb-4 px-4 py-2 rounded-lg flex items-center gap-2"
+          style={{ background: `${avisoFonte.cor}12`, border: `1px solid ${avisoFonte.cor}33` }}
+        >
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: avisoFonte.cor }} />
+          <span className="text-xs" style={{ color: avisoFonte.cor }}>{avisoFonte.texto}</span>
+        </div>
+      )}
 
       {/* ===================== CONTEÚDO ===================== */}
       {modoVisao === "periodo" ? (
