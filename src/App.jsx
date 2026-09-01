@@ -1203,7 +1203,10 @@ const temDados = (ano, mes) => {
 
 // Último dia com dado real
 const ultimoDiaComDado = (ano, mes) => {
-  const dados = DADOS_ASSINATURAS[`${ano}-${mes}`] || [];
+  // Precisa olhar a planilha também: senão o filtro de período trava no
+  // último dia gravado no código e a aba parece desatualizada.
+  const externo = usaFonteExterna(ano, mes) ? VPLUS_EXTERNO.diario?.[`${ano}-${mes}`] : null;
+  const dados = externo || DADOS_ASSINATURAS[`${ano}-${mes}`] || [];
   let ultimo = 0;
   dados.forEach((r) => {
     if (r[1] > 0) ultimo = Math.max(ultimo, r[0]);
@@ -1304,6 +1307,10 @@ export default function App() {
   // Alias de compatibilidade: diaCorte = fim do período
   const diaCorte = diaFim;
 
+  // Enquanto o usuário não mexer no filtro, o período acompanha o último dia
+  // com dado. Depois que ele escolhe um intervalo, o painel para de mexer.
+  const [periodoTocado, setPeriodoTocado] = useState(false);
+
   // Fonte externa do V+: busca a planilha publicada no carregamento e a cada
   // 5 minutos. O incremento de `versaoDados` força o redesenho depois do fetch.
   const [versaoDados, setVersaoDados] = useState(0);
@@ -1373,6 +1380,7 @@ export default function App() {
   // Ao trocar mês/ano, resetar período: início=1, fim=último dia com dado
   useEffect(() => {
     setDiaInicio(1);
+    setPeriodoTocado(false);
     if (produto?.real) {
       const ult = ultimoDiaComDado(ano, mes);
       if (ult > 0) setDiaFim(ult);
@@ -1381,6 +1389,15 @@ export default function App() {
       setDiaFim(diasNoMes(ano, mes));
     }
   }, [ano, mes, produtoId]);
+
+  // A planilha chega depois da primeira renderização. Quando ela traz dias
+  // além do fim atual, estende o período — a não ser que o usuário já tenha
+  // escolhido um intervalo à mão.
+  useEffect(() => {
+    if (periodoTocado || !produto?.real) return;
+    const ult = ultimoDiaComDado(ano, mes);
+    if (ult > diaFim) setDiaFim(ult);
+  }, [versaoDados]);
 
   const dadosDisponiveis = produto?.real && temDados(ano, mes);
 
@@ -1640,6 +1657,7 @@ export default function App() {
               <label className="text-[10px] uppercase tracking-widest text-stone-500">Período · de</label>
               <select value={diaInicio} onChange={(e) => {
                 const v = +e.target.value;
+                setPeriodoTocado(true);
                 setDiaInicio(v);
                 if (v > diaFim) setDiaFim(v);
               }}>
@@ -1652,6 +1670,7 @@ export default function App() {
               <label className="text-[10px] uppercase tracking-widest text-stone-500">Período · até</label>
               <select value={diaFim} onChange={(e) => {
                 const v = +e.target.value;
+                setPeriodoTocado(true);
                 setDiaFim(v);
                 if (v < diaInicio) setDiaInicio(v);
               }}>
@@ -1665,7 +1684,7 @@ export default function App() {
                 <button
                   className="text-[10px] uppercase tracking-widest px-3 py-2 rounded"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#a8a29e" }}
-                  onClick={() => { setDiaInicio(1); setDiaFim(diasNoMes(ano, mes)); }}
+                  onClick={() => { setPeriodoTocado(true); setDiaInicio(1); setDiaFim(diasNoMes(ano, mes)); }}
                 >
                   Mês todo
                 </button>
