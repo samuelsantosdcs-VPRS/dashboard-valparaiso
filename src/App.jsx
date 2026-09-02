@@ -468,9 +468,14 @@ function produtosDoMes(anoMes) {
   const ov = OVERRIDES_DIRETORIA[anoMes];
   if (!ov || !ov.produtos) return null;
   const partes = anoMes.split("-");
-  const externo = totalVPlusExterno(parseInt(partes[0], 10), parseInt(partes[1], 10));
-  if (externo === null || externo === undefined) return ov.produtos;
-  return { ...ov.produtos, assinaturas: externo };
+  const ano = parseInt(partes[0], 10);
+  const mes = parseInt(partes[1], 10);
+  let produtos = ov.produtos;
+  Object.keys(FONTES_EXTERNAS).forEach((pid) => {
+    const t = totalExterno(pid, ano, mes);
+    if (t !== null && t !== undefined) produtos = { ...produtos, [pid]: t };
+  });
+  return produtos;
 }
 
 // Soma todos os produtos em R$ (acesso é contagem, não soma)
@@ -957,27 +962,61 @@ const diasNoMes = (ano, mes) => new Date(ano, mes, 0).getDate();
 
 // Retorna a série do mês: array de {dia, valor, meta} com 0 pra dias não preenchidos
 // ============================================================
-// FONTE EXTERNA — Assinaturas V+ via Google Sheets publicado
+// FONTES EXTERNAS — planilhas do Google publicadas em CSV
 // ------------------------------------------------------------
-// A planilha é alimentada com o export do Multiclubes e publicada em
-// CSV. Vem linha a linha, uma por lançamento, já normalizada:
-//   competencia | data_pagamento | consultor | valor_pago | quantidade
-// O painel agrega sozinho, então não é preciso manter abas de resumo.
-// Regras:
-//  · só vale para os meses listados em `meses`; histórico fechado
+// Cada produto pode ter a própria planilha, alimentada com o export
+// do sistema de origem e publicada em CSV. O painel lê linha a linha
+// e agrega sozinho, então não é preciso manter abas de resumo.
+// Regras iguais para todos:
+//  · só valem para os meses listados em `meses`; histórico fechado
 //    continua vindo do código, para não mudar sozinho;
 //  · se a busca falhar, o painel usa os valores gravados e avisa;
 //  · nada aqui bloqueia a renderização.
 // ============================================================
-const FONTE_VPLUS = {
-  ativo: true,
-  meses: ["2026-8"],
-  url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=941178592&single=true&output=csv",
+const FONTES_EXTERNAS = {
+  assinaturas: {
+    rotulo: "V+",
+    ativo: true,
+    meses: ["2026-8"],
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=941178592&single=true&output=csv",
+    // nome da coluna → apelidos aceitos no cabeçalho, em minúsculo
+    colunas: {
+      data: ["data_pagamento", "data", "data/hora"],
+      valor: ["valor_pago", "valor", "preço", "preco"],
+      pessoa: ["consultor", "promotor", "vendedor"],
+      quantidade: ["quantidade", "qtd"],
+      competencia: ["competencia", "competência"],
+    },
+  },
+  bilheteria_online: {
+    rotulo: "E-commerce",
+    ativo: true,
+    meses: ["2026-8"],
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=2100805819&single=true&output=csv",
+    colunas: {
+      data: ["data_venda", "data/hora", "data", "data_pagamento"],
+      valor: ["valor_total", "valor_unitario", "preço", "preco", "valor"],
+      pedido: ["localizador", "pedido", "id_pedido"],
+      status: ["status"],
+      competencia: ["competencia_venda", "competencia", "competência"],
+      // segunda data: alimenta a curva de "agendados para o mês".
+      // Não usa competência, porque venda de julho pode ter visita em agosto.
+      visita: ["data_visita", "data de visita"],
+      // hora da compra: alimenta o mapa de dia da semana × hora
+      hora: ["data_hora_venda", "hora_venda", "data/hora"],
+      // colunas que alimentam os indicadores de comportamento
+      utilizado: ["utilizado"],
+      antecedencia: ["antecedencia_dias", "antecedencia"],
+      bilhete: ["bilhete", "produto", "produto_nome"],
+      pagamento: ["forma_pagamento", "forma de pagamento"],
+      parcelas: ["parcelas"],
+      cortesia: ["cortesia"],
+    },
+  },
 };
 
-// O Multiclubes grava o nome completo em caixa alta. O painel usa nomes
-// curtos, e é por eles que o comparativo com o ano anterior encontra a
-// pessoa. Nome que não estiver aqui entra em Capitalizado.
+// Nome completo em caixa alta → nome curto usado no painel. É por ele que o
+// comparativo com o ano anterior encontra a pessoa.
 const NOMES_VPLUS = {
   "CAROL SIQUEIRA": "Carol",
   "JARDSON FRAZAO SANTANA": "Jardson",
@@ -992,7 +1031,7 @@ const NOMES_VPLUS = {
   "DAVID COQUEIRO": "David Coqueiro",
   "LISLLEIDY NUNES": "Lislleidy Nunes",
   "VALPARAÍSO": "Loja Web",
-  "VALPARAISO": "Loja Web",
+  VALPARAISO: "Loja Web",
   CIBELLE: "Cibelle",
   VALTEMIR: "Valtemir",
   GEODSON: "Geodson",
@@ -1004,27 +1043,23 @@ const nomeCurtoVPlus = (bruto) => {
   const t = String(bruto || "").trim();
   if (!t) return "";
   if (NOMES_VPLUS[t.toUpperCase()]) return NOMES_VPLUS[t.toUpperCase()];
-  return t
-    .toLowerCase()
-    .split(/\s+/)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(" ");
+  return t.toLowerCase().split(/\s+/)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
 };
 
-const VPLUS_EXTERNO = {
-  diario: null,        // { "2026-8": [[dia, valor, meta], ...] }
-  consultores: null,   // { "2026-8": [[nome, valor, qtd], ...] }
-  linhas: 0,
-  atualizadoEm: null,
-  erro: null,
-  carregando: false,
+// Estado por produto. Não é estado do React de propósito: getSerie e afins
+// são funções de módulo e precisam enxergar o dado sem receber props.
+const EXTERNO = {};
+Object.keys(FONTES_EXTERNAS).forEach((p) => {
+  EXTERNO[p] = { diario: null, visitas: null, horarios: null, indicadores: null, pessoas: null, linhas: 0, atualizadoEm: null, erro: null, carregando: false };
+});
+
+const usaFonteExterna = (produto, ano, mes) => {
+  const f = FONTES_EXTERNAS[produto];
+  return !!f && f.ativo && !!f.url && f.meses.includes(`${ano}-${mes}`);
 };
 
-const usaFonteExterna = (ano, mes) =>
-  FONTE_VPLUS.ativo && FONTE_VPLUS.meses.includes(`${ano}-${mes}`);
-
-// Parser de CSV tolerante: aceita vírgula ou ponto e vírgula, campos com
-// aspas e quebra de linha dentro do campo.
+// Parser de CSV tolerante: vírgula ou ponto e vírgula, campos com aspas.
 function parseCSV(texto) {
   const linhas = texto.replace(/\r/g, "").split("\n").filter((l) => l.trim() !== "");
   if (linhas.length === 0) return [];
@@ -1063,14 +1098,26 @@ function paraNumero(bruto) {
   return negativo ? -n : n;
 }
 
-async function carregarVPlusExterno() {
-  if (!FONTE_VPLUS.ativo || VPLUS_EXTERNO.carregando) return false;
-  VPLUS_EXTERNO.carregando = true;
+// Aceita "01/08/2026", "01/08/2026 14:32" e "2026-08-01"
+function diaEMes(bruto) {
+  const t = String(bruto || "").trim();
+  let m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(t);
+  if (m) return { dia: +m[1], mes: +m[2], ano: +m[3] };
+  m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+  if (m) return { dia: +m[3], mes: +m[2], ano: +m[1] };
+  return null;
+}
+
+async function carregarFonteExterna(produto) {
+  const f = FONTES_EXTERNAS[produto];
+  const est = EXTERNO[produto];
+  if (!f || !f.ativo || !f.url || est.carregando) return false;
+  est.carregando = true;
   try {
     // O parâmetro de tempo derruba cache de navegador e de CDN intermediário.
     // O cache do próprio Google no CSV publicado (~5 min) não tem como burlar.
-    const sep = FONTE_VPLUS.url.includes("?") ? "&" : "?";
-    const resp = await fetch(`${FONTE_VPLUS.url}${sep}_=${Date.now()}`, {
+    const sep = f.url.includes("?") ? "&" : "?";
+    const resp = await fetch(`${f.url}${sep}_=${Date.now()}`, {
       cache: "no-store",
       headers: { "Cache-Control": "no-cache" },
     });
@@ -1078,51 +1125,182 @@ async function carregarVPlusExterno() {
     const linhas = parseCSV(await resp.text());
     if (linhas.length < 2) throw new Error("planilha vazia");
 
-    const cab = linhas[0].map((h) => h.toLowerCase());
-    const col = (nome) => cab.indexOf(nome);
-    const iComp = col("competencia");
-    const iData = col("data_pagamento");
-    const iCons = col("consultor");
-    const iValor = col("valor_pago");
-    const iQtd = col("quantidade");
-    if (iComp < 0 || iData < 0 || iCons < 0 || iValor < 0) {
-      throw new Error("colunas esperadas não encontradas");
-    }
+    const cab = linhas[0].map((h) => h.toLowerCase().trim());
+    const acha = (apelidos) => {
+      for (const a of apelidos || []) {
+        const i = cab.indexOf(a);
+        if (i >= 0) return i;
+      }
+      return -1;
+    };
+    const iData = acha(f.colunas.data);
+    const iValor = acha(f.colunas.valor);
+    const iPessoa = acha(f.colunas.pessoa);
+    const iQtd = acha(f.colunas.quantidade);
+    const iPedido = acha(f.colunas.pedido);
+    const iStatus = acha(f.colunas.status);
+    const iComp = acha(f.colunas.competencia);
+    const iVisita = acha(f.colunas.visita);
+    const iHora = acha(f.colunas.hora);
+    const iUsado = acha(f.colunas.utilizado);
+    const iAntec = acha(f.colunas.antecedencia);
+    const iBilhete = acha(f.colunas.bilhete);
+    const iPagto = acha(f.colunas.pagamento);
+    const iParcelas = acha(f.colunas.parcelas);
+    const iCortesia = acha(f.colunas.cortesia);
+    if (iData < 0 || iValor < 0) throw new Error("faltam colunas de data ou valor");
 
     const diario = {};
-    const consultores = {};
+    const visitas = {};
+    const horarios = {};
+    const pessoas = {};
+    const indicadores = {};
     let usadas = 0;
 
-    for (const chave of FONTE_VPLUS.meses) {
+    for (const chave of f.meses) {
       const [ano, mes] = chave.split("-").map(Number);
       const comp = `${ano}-${String(mes).padStart(2, "0")}`;
-      const porDia = new Map();
+      const porDia = new Map();     // dia → [valor, linhas, Set(pedidos)]
+      const porVisita = new Map();  // idem, mas pela data de visita
+      const porHora = new Map();    // "diaSemana-hora" → [valor, Set(pedidos), linhas]
+      const porUso = new Map();     // dia de visita → [ingressos, utilizados]
+      const porBilhete = new Map(); // nome → [valor, ingressos, Set(pedidos)]
+      const porPagto = new Map();   // forma → [valor, ingressos, Set(pedidos)]
+      const antec = [];             // antecedência em dias, um item por ingresso
+      let parcelasSoma = 0, parcelasN = 0, cortesias = 0;
       const porPessoa = new Map();
 
       for (let i = 1; i < linhas.length; i++) {
         const l = linhas[i];
-        if ((l[iComp] || "").trim() !== comp) continue;
-        const md = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((l[iData] || "").trim());
-        if (!md) continue;
-        const dia = parseInt(md[1], 10);
-        const valor = paraNumero(l[iValor]);
-        const qtd = iQtd >= 0 ? paraNumero(l[iQtd]) : 0;
-        const nome = nomeCurtoVPlus(l[iCons]);
-        if (!nome) continue;
+        // status vazio passa; se existir, só aprovado entra
+        if (iStatus >= 0) {
+          const st = (l[iStatus] || "").trim().toLowerCase();
+          if (st && !st.startsWith("aprovad")) continue;
+        }
 
-        porDia.set(dia, (porDia.get(dia) || 0) + valor);
-        const atual = porPessoa.get(nome) || [0, 0];
-        porPessoa.set(nome, [atual[0] + valor, atual[1] + qtd]);
+        // Série por data de visita: percorre o arquivo inteiro, sem filtro de
+        // competência, porque ingresso vendido em julho pode ser usado em agosto.
+        if (iVisita >= 0) {
+          const dv = diaEMes(l[iVisita]);
+          if (dv && dv.ano === ano && dv.mes === mes) {
+            const a = porVisita.get(dv.dia) || [0, 0, new Set()];
+            a[0] += paraNumero(l[iValor]);
+            a[1] += 1;
+            if (iPedido >= 0 && l[iPedido]) a[2].add(l[iPedido]);
+            porVisita.set(dv.dia, a);
+            // taxa de comparecimento: base é quem tinha visita marcada no mês
+            if (iUsado >= 0) {
+              const u = porUso.get(dv.dia) || [0, 0];
+              u[0] += 1;
+              if ((l[iUsado] || "").trim().toLowerCase().startsWith("s")) u[1] += 1;
+              porUso.set(dv.dia, u);
+            }
+          }
+        }
+
+        if (iComp >= 0 && (l[iComp] || "").trim() !== comp) continue;
+        const d = diaEMes(l[iData]);
+        if (!d || d.ano !== ano || d.mes !== mes) continue;
+
+        const valor = paraNumero(l[iValor]);
+        const atualDia = porDia.get(d.dia) || [0, 0, new Set()];
+        atualDia[0] += valor;
+        atualDia[1] += 1;
+        if (iPedido >= 0 && l[iPedido]) atualDia[2].add(l[iPedido]);
+        porDia.set(d.dia, atualDia);
+
+        // Mapa dia da semana × hora. A hora sai de "data_hora_venda" ou de
+        // "hora_venda"; o dia da semana usa 0 = domingo, como o painel espera.
+        if (iHora >= 0) {
+          const mh = /(\d{1,2}):(\d{2})/.exec(String(l[iHora] || ""));
+          if (mh) {
+            const chaveHora = `${new Date(ano, mes - 1, d.dia).getDay()}-${parseInt(mh[1], 10)}`;
+            const ah = porHora.get(chaveHora) || [0, new Set(), 0];
+            ah[0] += valor;
+            if (iPedido >= 0 && l[iPedido]) ah[1].add(l[iPedido]);
+            ah[2] += 1;
+            porHora.set(chaveHora, ah);
+          }
+        }
+
+        if (iBilhete >= 0 && l[iBilhete]) {
+          const nome = String(l[iBilhete]).trim();
+          const a = porBilhete.get(nome) || [0, 0, new Set()];
+          a[0] += valor; a[1] += 1;
+          if (iPedido >= 0 && l[iPedido]) a[2].add(l[iPedido]);
+          porBilhete.set(nome, a);
+        }
+        if (iPagto >= 0 && l[iPagto]) {
+          const nome = String(l[iPagto]).trim();
+          const a = porPagto.get(nome) || [0, 0, new Set()];
+          a[0] += valor; a[1] += 1;
+          if (iPedido >= 0 && l[iPedido]) a[2].add(l[iPedido]);
+          porPagto.set(nome, a);
+        }
+        if (iAntec >= 0) {
+          const dias = paraNumero(l[iAntec]);
+          if (Number.isFinite(dias) && dias >= 0) antec.push(dias);
+        }
+        if (iParcelas >= 0) {
+          const p = paraNumero(l[iParcelas]);
+          if (p > 0) { parcelasSoma += p; parcelasN += 1; }
+        }
+        if (iCortesia >= 0 && (l[iCortesia] || "").trim().toLowerCase().startsWith("s")) cortesias += 1;
+
+        if (iPessoa >= 0) {
+          const nome = nomeCurtoVPlus(l[iPessoa]);
+          if (nome) {
+            const a = porPessoa.get(nome) || [0, 0];
+            porPessoa.set(nome, [a[0] + valor, a[1] + (iQtd >= 0 ? paraNumero(l[iQtd]) : 1)]);
+          }
+        }
         usadas += 1;
       }
 
       if (porDia.size > 0) {
-        diario[chave] = [...porDia.entries()]
-          .sort((a, b) => a[0] - b[0])
-          .map(([d, v]) => [d, Math.round(v * 100) / 100, 5]);
+        diario[chave] = [...porDia.entries()].sort((a, b) => a[0] - b[0])
+          .map(([dia, [v, n, ped]]) => [dia, Math.round(v * 100) / 100, n, ped.size]);
       }
+      if (porHora.size > 0) {
+        const ordenado = [...porHora.entries()].sort((a, b) => {
+          const [da, ha] = a[0].split("-").map(Number);
+          const [db, hb] = b[0].split("-").map(Number);
+          return da - db || ha - hb;
+        });
+        horarios[chave] = Object.fromEntries(
+          ordenado.map(([k, [v, ped, n]]) => [k, [Math.round(v * 100) / 100, ped.size, n]])
+        );
+      }
+      if (porVisita.size > 0) {
+        visitas[chave] = [...porVisita.entries()].sort((a, b) => a[0] - b[0])
+          .map(([dia, [v, n, ped]]) => [dia, Math.round(v * 100) / 100, n, ped.size]);
+      }
+      const FAIXAS = [
+        ["Mesmo dia", 0, 0], ["1 a 3 dias", 1, 3], ["4 a 7 dias", 4, 7],
+        ["8 a 15 dias", 8, 15], ["16 a 30 dias", 16, 30], ["31+ dias", 31, 9999],
+      ];
+      const ordenado = [...antec].sort((a, b) => a - b);
+      const ind = {
+        utilizacao: [...porUso.entries()].sort((a, b) => a[0] - b[0]).map(([d, [t, u]]) => [d, t, u]),
+        bilhetes: [...porBilhete.entries()]
+          .map(([n, [v, i, p]]) => [n, Math.round(v * 100) / 100, i, p.size])
+          .sort((a, b) => b[1] - a[1]),
+        pagamentos: [...porPagto.entries()]
+          .map(([n, [v, i, p]]) => [n, Math.round(v * 100) / 100, i, p.size])
+          .sort((a, b) => b[1] - a[1]),
+        antecedencia: {
+          media: antec.length ? Math.round((antec.reduce((a, b) => a + b, 0) / antec.length) * 10) / 10 : null,
+          mediana: ordenado.length ? ordenado[Math.floor(ordenado.length / 2)] : null,
+          n: antec.length,
+          faixas: FAIXAS.map(([rot, lo, hi]) => [rot, antec.filter((d) => d >= lo && d <= hi).length]),
+        },
+        parcelasMedia: parcelasN ? Math.round((parcelasSoma / parcelasN) * 10) / 10 : null,
+        cortesias,
+      };
+      if (ind.utilizacao.length || ind.bilhetes.length || ind.antecedencia.n) indicadores[chave] = ind;
+
       if (porPessoa.size > 0) {
-        consultores[chave] = [...porPessoa.entries()]
+        pessoas[chave] = [...porPessoa.entries()]
           .map(([n, [v, q]]) => [n, Math.round(v * 100) / 100, Math.round(q)])
           .sort((a, b) => b[1] - a[1]);
       }
@@ -1130,32 +1308,96 @@ async function carregarVPlusExterno() {
 
     if (usadas === 0) throw new Error("nenhuma linha na competência configurada");
 
-    VPLUS_EXTERNO.diario = Object.keys(diario).length ? diario : null;
-    VPLUS_EXTERNO.consultores = Object.keys(consultores).length ? consultores : null;
-    VPLUS_EXTERNO.linhas = usadas;
-    VPLUS_EXTERNO.atualizadoEm = new Date();
-    VPLUS_EXTERNO.erro = null;
+    est.diario = Object.keys(diario).length ? diario : null;
+    est.visitas = Object.keys(visitas).length ? visitas : null;
+    est.horarios = Object.keys(horarios).length ? horarios : null;
+    est.indicadores = Object.keys(indicadores).length ? indicadores : null;
+    est.pessoas = Object.keys(pessoas).length ? pessoas : null;
+    est.linhas = usadas;
+    est.atualizadoEm = new Date();
+    est.erro = null;
     return true;
   } catch (e) {
-    VPLUS_EXTERNO.erro = e.message || "falha ao ler a planilha";
+    est.erro = e.message || "falha ao ler a planilha";
     return false;
   } finally {
-    VPLUS_EXTERNO.carregando = false;
+    est.carregando = false;
   }
 }
 
-// Total do mês vindo da planilha, para conferir contra o OVERRIDES_DIRETORIA.
-function totalVPlusExterno(ano, mes) {
-  if (!usaFonteExterna(ano, mes)) return null;
-  const c = VPLUS_EXTERNO.consultores?.[`${ano}-${mes}`];
-  if (c) return c.reduce((a, b) => a + b[1], 0);
-  const d = VPLUS_EXTERNO.diario?.[`${ano}-${mes}`];
-  if (d) return d.reduce((a, b) => a + b[1], 0);
-  return null;
+const carregarTodasFontes = () =>
+  Promise.all(Object.keys(FONTES_EXTERNAS).filter((p) => FONTES_EXTERNAS[p].ativo && FONTES_EXTERNAS[p].url)
+    .map((p) => carregarFonteExterna(p)));
+
+// Série diária externa no formato do produto pedido.
+const serieExterna = (produto, ano, mes) =>
+  usaFonteExterna(produto, ano, mes) ? EXTERNO[produto].diario?.[`${ano}-${mes}`] || null : null;
+
+// Total do mês vindo da planilha, para sobrepor o valor gravado.
+function totalExterno(produto, ano, mes) {
+  const d = serieExterna(produto, ano, mes);
+  if (!d) return null;
+  return d.reduce((a, r) => a + r[1], 0);
+}
+
+// Calendário de vendas do e-commerce, com a planilha por cima quando ligada.
+// Formato mantido: [dia, valor, ingressos, pedidos]
+function calendarioVendaOnline(ano, mes) {
+  const externo = serieExterna("bilheteria_online", ano, mes);
+  return externo || DADOS_BILHETERIA.calendario_venda[`${ano}-${mes}`] || [];
+}
+
+// Calendário por data de visita, com a planilha por cima quando ligada.
+function calendarioVisitaOnline(ano, mes) {
+  const externo = usaFonteExterna("bilheteria_online", ano, mes)
+    ? EXTERNO.bilheteria_online.visitas?.[`${ano}-${mes}`] || null
+    : null;
+  return externo || DADOS_BILHETERIA.calendario_visita[`${ano}-${mes}`] || [];
+}
+
+// Mapa dia da semana × hora da compra, com a planilha por cima quando ligada.
+function indicadoresOnline(ano, mes) {
+  return usaFonteExterna("bilheteria_online", ano, mes)
+    ? EXTERNO.bilheteria_online.indicadores?.[`${ano}-${mes}`] || null
+    : null;
+}
+
+function horariosVendaOnline(ano, mes) {
+  const externo = usaFonteExterna("bilheteria_online", ano, mes)
+    ? EXTERNO.bilheteria_online.horarios?.[`${ano}-${mes}`] || null
+    : null;
+  return externo || DADOS_HORARIOS_VENDA[`${ano}-${mes}`] || null;
+}
+
+// Resumo do e-commerce, recalculado a partir da planilha quando ligada.
+function resumoOnline(ano, mes) {
+  const gravado = DADOS_BILHETERIA.resumo[`${ano}-${mes}`];
+  const externo = serieExterna("bilheteria_online", ano, mes);
+  if (!externo) return gravado;
+  const soma = (serie, i) => serie.reduce((a, r) => a + (r[i] || 0), 0);
+  const valor = soma(externo, 1);
+  const ingressos = soma(externo, 2);
+  const pedidos = soma(externo, 3);
+  const vis = usaFonteExterna("bilheteria_online", ano, mes)
+    ? EXTERNO.bilheteria_online.visitas?.[`${ano}-${mes}`] || null
+    : null;
+  return {
+    ...(gravado || {}),
+    venda_valor: Math.round(valor * 100) / 100,
+    venda_ingressos: ingressos,
+    venda_vouchers: pedidos || gravado?.venda_vouchers || 0,
+    ticket_ingresso: ingressos > 0 ? Math.round((valor / ingressos) * 100) / 100 : 0,
+    ticket_voucher: pedidos > 0 ? Math.round((valor / pedidos) * 100) / 100 : 0,
+    ...(vis ? {
+      visita_valor: Math.round(soma(vis, 1) * 100) / 100,
+      visita_ingressos: soma(vis, 2),
+      visita_vouchers: soma(vis, 3),
+    } : {}),
+  };
 }
 
 const getSerie = (ano, mes) => {
-  const externo = usaFonteExterna(ano, mes) ? VPLUS_EXTERNO.diario?.[`${ano}-${mes}`] : null;
+  const externo = serieExterna("assinaturas", ano, mes);
   const dados = externo || DADOS_ASSINATURAS[`${ano}-${mes}`] || [];
   const dias = diasNoMes(ano, mes);
   const serie = [];
@@ -1211,7 +1453,7 @@ const temDados = (ano, mes) => {
 const ultimoDiaComDado = (ano, mes) => {
   // Precisa olhar a planilha também: senão o filtro de período trava no
   // último dia gravado no código e a aba parece desatualizada.
-  const externo = usaFonteExterna(ano, mes) ? VPLUS_EXTERNO.diario?.[`${ano}-${mes}`] : null;
+  const externo = serieExterna("assinaturas", ano, mes);
   const dados = externo || DADOS_ASSINATURAS[`${ano}-${mes}`] || [];
   let ultimo = 0;
   dados.forEach((r) => {
@@ -1257,7 +1499,7 @@ function getMetaIndividualVPlus(ano, mes, qtdConsultores, metaMensal) {
 }
 
 const getRankingConsultores = (ano, mes) => {
-  const externo = usaFonteExterna(ano, mes) ? VPLUS_EXTERNO.consultores?.[`${ano}-${mes}`] : null;
+  const externo = usaFonteExterna("assinaturas", ano, mes) ? EXTERNO.assinaturas.pessoas?.[`${ano}-${mes}`] : null;
   const lista = externo || DADOS_PROMOTORES[`${ano}-${mes}`] || [];
   return lista
     .filter(([nome]) => !CONSULTORES_EXCLUIDOS.has(nome))
@@ -1272,7 +1514,7 @@ const getRankingConsultores = (ano, mes) => {
 
 // Busca valor de um consultor específico em um período
 const getValorConsultor = (ano, mes, nome) => {
-  const externo = usaFonteExterna(ano, mes) ? VPLUS_EXTERNO.consultores?.[`${ano}-${mes}`] : null;
+  const externo = usaFonteExterna("assinaturas", ano, mes) ? EXTERNO.assinaturas.pessoas?.[`${ano}-${mes}`] : null;
   const lista = externo || DADOS_PROMOTORES[`${ano}-${mes}`] || [];
   const found = lista.find(([n]) => n === nome);
   return found ? found[1] : 0;
@@ -1317,14 +1559,15 @@ export default function App() {
   // com dado. Depois que ele escolhe um intervalo, o painel para de mexer.
   const [periodoTocado, setPeriodoTocado] = useState(false);
 
-  // Fonte externa do V+: busca a planilha publicada no carregamento e a cada
-  // 5 minutos. O incremento de `versaoDados` força o redesenho depois do fetch.
+  // Fontes externas: busca as planilhas publicadas ao abrir e a cada 2 minutos.
+  // O incremento de `versaoDados` força o redesenho depois da leitura.
   const [versaoDados, setVersaoDados] = useState(0);
   useEffect(() => {
-    if (!FONTE_VPLUS.ativo) return;
+    const alguma = Object.values(FONTES_EXTERNAS).some((f) => f.ativo && f.url);
+    if (!alguma) return;
     let vivo = true;
     const puxar = async () => {
-      await carregarVPlusExterno();
+      await carregarTodasFontes();
       if (vivo) setVersaoDados((v) => v + 1);
     };
     puxar();
@@ -1335,38 +1578,38 @@ export default function App() {
   const [recarregando, setRecarregando] = useState(false);
   const recarregarPlanilha = async () => {
     setRecarregando(true);
-    await carregarVPlusExterno();
+    await carregarTodasFontes();
     setVersaoDados((v) => v + 1);
     setRecarregando(false);
   };
 
-  // Aviso do estado da fonte externa, exibido só quando ela está ligada.
-  const avisoFonte = (() => {
-    if (!FONTE_VPLUS.ativo || !usaFonteExterna(ano, mes)) return null;
-    if (VPLUS_EXTERNO.erro) {
-      return {
-        cor: "#f59e0b",
-        texto: `Planilha do V+ indisponível (${VPLUS_EXTERNO.erro}). Exibindo os últimos valores gravados no painel.`,
-      };
-    }
-    if (!VPLUS_EXTERNO.atualizadoEm) {
-      return { cor: "#78716c", texto: "Lendo a planilha do V+..." };
-    }
-    const hora = VPLUS_EXTERNO.atualizadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const totalPlanilha = totalVPlusExterno(ano, mes);
-    const reserva = OVERRIDES_DIRETORIA[`${ano}-${mes}`]?.produtos?.assinaturas;
-    const dif = totalPlanilha != null && reserva != null ? totalPlanilha - reserva : 0;
-    const base = `V+ pela planilha às ${hora} · ${formatBRL(totalPlanilha)} em ${VPLUS_EXTERNO.linhas} lançamentos`;
-    // A planilha é a fonte; o número no código é reserva. Se a reserva ficou
-    // para trás, isso é só informativo, não é erro.
-    if (Math.abs(dif) > 0.5) {
-      return {
-        cor: "#10b981",
-        texto: `${base} · o painel está usando este valor. A reserva gravada no código (${formatBRL(reserva)}) está ${dif > 0 ? "atrás" : "à frente"} em ${formatBRL(Math.abs(dif))}.`,
-      };
-    }
-    return { cor: "#10b981", texto: base };
-  })();
+  // Uma linha de status por produto com planilha ligada no mês selecionado.
+  const avisosFonte = Object.keys(FONTES_EXTERNAS)
+    .filter((pid) => usaFonteExterna(pid, ano, mes))
+    .map((pid) => {
+      const f = FONTES_EXTERNAS[pid];
+      const est = EXTERNO[pid];
+      if (est.erro) {
+        return { pid, cor: "#f59e0b", texto: `Planilha de ${f.rotulo} indisponível (${est.erro}). Exibindo os últimos valores gravados no painel.` };
+      }
+      if (!est.atualizadoEm) {
+        return { pid, cor: "#78716c", texto: `Lendo a planilha de ${f.rotulo}...` };
+      }
+      const hora = est.atualizadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const total = totalExterno(pid, ano, mes);
+      const reserva = OVERRIDES_DIRETORIA[`${ano}-${mes}`]?.produtos?.[pid];
+      const dif = total != null && reserva != null ? total - reserva : 0;
+      const base = `${f.rotulo} pela planilha às ${hora} · ${formatBRL(total)} em ${est.linhas} lançamentos`;
+      // A planilha é a fonte; o número no código é reserva. Se a reserva ficou
+      // para trás, isso é só informativo, não é erro.
+      if (Math.abs(dif) > 0.5) {
+        return {
+          pid, cor: "#10b981",
+          texto: `${base} · o painel está usando este valor. A reserva gravada no código (${formatBRL(reserva)}) está ${dif > 0 ? "atrás" : "à frente"} em ${formatBRL(Math.abs(dif))}.`,
+        };
+      }
+      return { pid, cor: "#10b981", texto: base };
+    });
 
   // ── MODO DE VISÃO: "mensal" (padrão) ou "periodo" (range livre de datas) ──
   const [modoVisao, setModoVisao] = useState("mensal");
@@ -1768,11 +2011,11 @@ export default function App() {
         <div className="accent-line mt-6" />
       </header>
 
-      {/* Estado da fonte externa do V+ */}
-      {avisoFonte && (
+      {/* Estado das fontes externas */}
+      {avisosFonte.map((avisoFonte, idxAviso) => (
         <div
-          key={versaoDados}
-          className="mb-4 px-4 py-2 rounded-lg flex items-center gap-2"
+          key={`${avisoFonte.pid}-${versaoDados}`}
+          className="mb-2 px-4 py-2 rounded-lg flex items-center gap-2"
           style={{ background: `${avisoFonte.cor}12`, border: `1px solid ${avisoFonte.cor}33` }}
         >
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: avisoFonte.cor }} />
@@ -1791,7 +2034,7 @@ export default function App() {
             {recarregando ? "Lendo..." : "Reler agora"}
           </button>
         </div>
-      )}
+      ))}
 
       {/* ===================== CONTEÚDO ===================== */}
       {modoVisao === "periodo" ? (
@@ -4719,8 +4962,8 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
   const chave = `${ano}-${mes}`;
   const chaveAnt = `${ano - 1}-${mes}`;
-  const resumoAtual = DADOS_BILHETERIA.resumo[chave];
-  const resumoAnt = DADOS_BILHETERIA.resumo[chaveAnt];
+  const resumoAtual = resumoOnline(ano, mes);
+  const resumoAnt = resumoOnline(ano - 1, mes);
 
   if (!resumoAtual) {
     return (
@@ -4746,12 +4989,12 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   const deltaTicket = resumoAnt && resumoAnt.ticket_ingresso > 0 ? ((resumoAtual.ticket_ingresso - resumoAnt.ticket_ingresso) / resumoAnt.ticket_ingresso) * 100 : null;
 
   // Meta do dia (diaCorte) — baseada no mesmo dia do ano anterior × 1,20
-  const calVendaAnt = DADOS_BILHETERIA.calendario_venda[chaveAnt] || [];
+  const calVendaAnt = calendarioVendaOnline(ano - 1, mes);
   const diaCorteEfetivoBO = diaCorte || new Date().getDate();
   const registroDiaAnt = calVendaAnt.find((r) => r[0] === diaCorteEfetivoBO);
   const valorDiaAnt = registroDiaAnt ? registroDiaAnt[1] : null;
   const metaDia = valorDiaAnt != null ? valorDiaAnt * 1.2 : null;
-  const calVendaAtualBO = DADOS_BILHETERIA.calendario_venda[chave] || [];
+  const calVendaAtualBO = calendarioVendaOnline(ano, mes);
   const registroDiaAtual = calVendaAtualBO.find((r) => r[0] === diaCorteEfetivoBO);
   const valorDiaAtual = registroDiaAtual ? registroDiaAtual[1] : 0;
   const atingimentoDia = metaDia ? (valorDiaAtual / metaDia) * 100 : null;
@@ -4759,8 +5002,8 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   // Calendário: combinar dados de venda e visita
   const diasMes = new Date(ano, mes, 0).getDate();
   const primeiroDiaDaSemana = new Date(ano, mes - 1, 1).getDay(); // 0 = dom
-  const venda = DADOS_BILHETERIA.calendario_venda[chave] || [];
-  const visita = DADOS_BILHETERIA.calendario_visita[chave] || [];
+  const venda = calendarioVendaOnline(ano, mes);
+  const visita = calendarioVisitaOnline(ano, mes);
   const mapVenda = new Map(venda.map((r) => [r[0], { valor: r[1], ingressos: r[2], vouchers: r[3] }]));
   const mapVisita = new Map(visita.map((r) => [r[0], { valor: r[1], ingressos: r[2], vouchers: r[3] }]));
 
@@ -4938,8 +5181,8 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
       {/* EVOLUÇÃO DIÁRIA ACUMULADA - Bilheteria Online */}
       {metaVenda && metaVenda > 0 && (
         <EvolucaoAcumulada
-          diasAtual={(DADOS_BILHETERIA.calendario_venda[chave] || []).map(r => [r[0], r[1]])}
-          diasAnterior={(DADOS_BILHETERIA.calendario_venda[chaveAnt] || []).map(r => [r[0], r[1]])}
+          diasAtual={calendarioVendaOnline(ano, mes).map(r => [r[0], r[1]])}
+          diasAnterior={calendarioVendaOnline(ano - 1, mes).map(r => [r[0], r[1]])}
           meta={metaVenda}
           ano={ano}
           mes={mes}
@@ -5290,9 +5533,140 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
         </div>
       </section>
 
+      {/* INDICADORES DE COMPORTAMENTO — vindos da planilha do e-commerce */}
+      {(() => {
+        const ind = indicadoresOnline(ano, mes);
+        if (!ind) return null;
+
+        const diasMes = diasNoMes(ano, mes);
+        const fim = Math.min(diaCorte ?? diasMes, diasMes);
+        const ini = Math.max(1, Math.min(diaInicio, fim));
+
+        // Comparecimento só faz sentido em dia de visita já passado.
+        const noPeriodo = ind.utilizacao.filter((r) => r[0] >= ini && r[0] <= fim);
+        const agendados = noPeriodo.reduce((a, r) => a + r[1], 0);
+        const compareceram = noPeriodo.reduce((a, r) => a + r[2], 0);
+        const taxa = agendados > 0 ? (compareceram / agendados) * 100 : null;
+        const faltaram = agendados - compareceram;
+
+        const ant = ind.antecedencia;
+        const totalFaixas = ant.faixas.reduce((a, f) => a + f[1], 0);
+        const maiorFaixa = Math.max(1, ...ant.faixas.map((f) => f[1]));
+
+        const totalBilhetes = ind.bilhetes.reduce((a, b) => a + b[1], 0);
+        const totalPagtos = ind.pagamentos.reduce((a, p) => a + p[1], 0);
+
+        return (
+          <>
+            <section className="kpi-grid mb-6">
+              <KPICard
+                icon={<Users size={16} />}
+                label="Taxa de comparecimento"
+                value={taxa !== null ? `${taxa.toFixed(1)}%` : "—"}
+                sub={agendados > 0 ? `${compareceram.toLocaleString("pt-BR")} de ${agendados.toLocaleString("pt-BR")} agendados` : "sem visitas no período"}
+              />
+              <KPICard
+                icon={<AlertCircle size={16} />}
+                label="Não compareceram"
+                value={agendados > 0 ? faltaram.toLocaleString("pt-BR") : "—"}
+                sub={agendados > 0 ? `${((faltaram / agendados) * 100).toFixed(1)}% dos ingressos agendados` : "—"}
+              />
+              <KPICard
+                icon={<Calendar size={16} />}
+                label="Antecedência média"
+                value={ant.media !== null ? `${ant.media} dias` : "—"}
+                sub={ant.mediana !== null ? `mediana de ${ant.mediana} dias · ${ant.n.toLocaleString("pt-BR")} ingressos` : "—"}
+              />
+              <KPICard
+                icon={<Target size={16} />}
+                label="Parcelamento médio"
+                value={ind.parcelasMedia !== null ? `${ind.parcelasMedia}x` : "—"}
+                sub={ind.cortesias > 0 ? `${ind.cortesias} cortesias no mês` : "sem cortesias no mês"}
+              />
+            </section>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }} className="mb-6">
+              {/* Antecedência */}
+              <section className="card rounded-xl p-6">
+                <h3 className="display-font text-xl font-light mb-1">Antecedência de compra</h3>
+                <p className="text-stone-500 text-xs mb-4">
+                  Quantos dias antes da visita o ingresso foi comprado. Base: {ant.n.toLocaleString("pt-BR")} ingressos vendidos no mês.
+                </p>
+                {ant.faixas.map(([rot, qtd]) => (
+                  <div key={rot} className="flex items-center gap-3 py-1.5">
+                    <span className="text-xs text-stone-400" style={{ width: 96 }}>{rot}</span>
+                    <div className="flex-1 h-4 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
+                      <div className="h-full rounded" style={{ width: `${(qtd / maiorFaixa) * 100}%`, background: "#06b6d4" }} />
+                    </div>
+                    <span className="mono-font text-xs text-stone-300" style={{ width: 78, textAlign: "right" }}>
+                      {qtd.toLocaleString("pt-BR")}
+                      <span className="text-stone-600"> · {totalFaixas > 0 ? ((qtd / totalFaixas) * 100).toFixed(0) : 0}%</span>
+                    </span>
+                  </div>
+                ))}
+              </section>
+
+              {/* Formas de pagamento */}
+              <section className="card rounded-xl p-6">
+                <h3 className="display-font text-xl font-light mb-1">Formas de pagamento</h3>
+                <p className="text-stone-500 text-xs mb-4">Participação no valor vendido no mês</p>
+                {ind.pagamentos.map(([nome, valor, ing, ped]) => (
+                  <div key={nome} className="py-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex justify-between items-baseline mb-1">
+                      <span className="text-sm text-stone-100">{nome}</span>
+                      <span className="mono-font text-sm text-stone-200">{formatBRL(valor)}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-3">
+                      <div className="flex-1 h-1.5 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
+                        <div className="h-full rounded" style={{ width: `${totalPagtos > 0 ? (valor / totalPagtos) * 100 : 0}%`, background: "#10b981" }} />
+                      </div>
+                      <span className="text-[11px] text-stone-500 shrink-0">
+                        {totalPagtos > 0 ? ((valor / totalPagtos) * 100).toFixed(1) : 0}% · {ing.toLocaleString("pt-BR")} ingr · {ped.toLocaleString("pt-BR")} ped
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            </div>
+
+            {/* Mix de produtos */}
+            <section className="card rounded-xl p-6 mb-6">
+              <h3 className="display-font text-xl font-light mb-1">Mix de produtos vendidos</h3>
+              <p className="text-stone-500 text-xs mb-4">Ordenado por receita no mês</p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-stone-500 text-xs uppercase tracking-wider">
+                    <th className="text-left pb-2">Produto</th>
+                    <th className="text-right pb-2">Ingressos</th>
+                    <th className="text-right pb-2">Pedidos</th>
+                    <th className="text-right pb-2">Ticket</th>
+                    <th className="text-right pb-2">Receita</th>
+                    <th className="text-right pb-2">Part.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ind.bilhetes.slice(0, 12).map(([nome, valor, ing, ped]) => (
+                    <tr key={nome} className="border-t border-white/5">
+                      <td className="py-2 truncate" style={{ maxWidth: 260 }}>{nome}</td>
+                      <td className="py-2 text-right mono-font">{ing.toLocaleString("pt-BR")}</td>
+                      <td className="py-2 text-right mono-font text-stone-400">{ped.toLocaleString("pt-BR")}</td>
+                      <td className="py-2 text-right mono-font text-stone-400">{formatBRL(ing > 0 ? valor / ing : 0)}</td>
+                      <td className="py-2 text-right mono-font">{formatBRL(valor)}</td>
+                      <td className="py-2 text-right mono-font text-stone-400">
+                        {totalBilhetes > 0 ? ((valor / totalBilhetes) * 100).toFixed(1) : 0}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          </>
+        );
+      })()}
+
       {/* MAPA DE CALOR — QUANDO O CLIENTE COMPRA */}
       {(() => {
-        const matriz = DADOS_HORARIOS_VENDA[chave];
+        const matriz = horariosVendaOnline(ano, mes);
         if (!matriz || Object.keys(matriz).length === 0) return null;
 
         const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -6339,7 +6713,7 @@ function serieDiariaProduto(produtoId, ano, mes) {
       return out;
     }
     case "bilheteria_online": {
-      const cal = DADOS_BILHETERIA.calendario_venda[key];
+      const cal = calendarioVendaOnline(ano, mes);
       if (!cal) return null;
       cal.forEach((r) => { out[r[0]] = { valor: r[1], unidades: r[2] || 0 }; });
       return out;
@@ -6445,7 +6819,7 @@ function getReceitaMes(produtoId, ano, mes) {
       return { valor: d.total, unidades: d.total_ingressos, temDados: true };
     }
     case "bilheteria_online": {
-      const d = DADOS_BILHETERIA.resumo[key];
+      const d = resumoOnline(ano, mes);
       if (!d || d.venda_valor === 0) return null;
       return { valor: d.venda_valor, unidades: d.venda_ingressos, temDados: true };
     }
