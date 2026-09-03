@@ -472,9 +472,14 @@ function produtosDoMes(anoMes) {
   const mes = parseInt(partes[1], 10);
   let produtos = ov.produtos;
   Object.keys(FONTES_EXTERNAS).forEach((pid) => {
+    if (pid === "consumo_ab") return; // tratado à parte, precisa somar o Fini
     const t = totalExterno(pid, ano, mes);
     if (t !== null && t !== undefined) produtos = { ...produtos, [pid]: t };
   });
+  const ab = resumoAB(ano, mes);
+  if (usaFonteExterna("consumo_ab", ano, mes) && ab) {
+    produtos = { ...produtos, consumo: ab.total };
+  }
   return produtos;
 }
 
@@ -1041,6 +1046,25 @@ const FONTES_EXTERNAS = {
       tempos_pagamento: ["minutos_ate_pagamento"],
     },
   },
+  consumo_ab: {
+    rotulo: "A&B",
+    ativo: true,
+    meses: ["2026-8"],
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=176043632&single=true&output=csv",
+    colunas: {
+      data: ["data"],
+      valor: ["valor_total_venda"],
+      competencia: ["competencia"],
+    },
+    excluirColuna: "loja",
+    excluirValores: ["DIGA X", "JOAO & TANNA"],
+    dimensoes: {
+      lojas: ["loja"],
+      categorias: ["categoria"],
+      produtos: ["produto_nome"],
+      operadores: ["operador"],
+    },
+  },
   acesso: {
     rotulo: "Acesso",
     ativo: true,
@@ -1198,6 +1222,7 @@ async function carregarFonteExterna(produto) {
     const iComp = acha(f.colunas.competencia);
     const iVisita = acha(f.colunas.visita);
     const iMovimento = acha(f.colunas.movimento);
+    const iExcl = f.excluirColuna ? acha([f.excluirColuna]) : -1;
     const iDedup = f.dedup ? acha(f.dedup) : -1;
     const iDedupHora = f.dedupHora ? acha(f.dedupHora) : -1;
     const janelaDedup = f.dedupJanelaSegundos || 0;
@@ -1278,6 +1303,7 @@ async function carregarFonteExterna(produto) {
         // "movimento" exige o valor exato (ex.: "Venda"), diferente do
         // prefixo "aprovad" usado no e-commerce.
         if (iMovimento >= 0 && f.movimentoValido && (l[iMovimento] || "").trim() !== f.movimentoValido) continue;
+        if (iExcl >= 0 && (f.excluirValores || []).includes((l[iExcl] || "").trim())) continue;
         if (iComp >= 0 && (l[iComp] || "").trim() !== comp) continue;
         const d = diaEMes(l[iData]);
         if (!d || d.ano !== ano || d.mes !== mes) continue;
@@ -1300,16 +1326,18 @@ async function carregarFonteExterna(produto) {
           vistos.set(chaveUnica, segundos);
         }
 
+        const valor = paraNumero(l[iValor]);
         Object.entries(dims).forEach(([nome, idx]) => {
           const rot = (l[idx] || "").trim() || "Sem informação";
-          porDim[nome].set(rot, (porDim[nome].get(rot) || 0) + 1);
+          const cur = porDim[nome].get(rot) || [0, 0];
+          cur[0] += 1; cur[1] += valor;
+          porDim[nome].set(rot, cur);
         });
         Object.entries(metrs).forEach(([nome, idx]) => {
           const v = paraNumero(l[idx]);
           if (Number.isFinite(v)) porMetrica[nome].push(v);
         });
 
-        const valor = paraNumero(l[iValor]);
         const atualDia = porDia.get(d.dia) || [0, 0, new Set()];
         atualDia[0] += valor;
         atualDia[1] += 1;
@@ -1405,7 +1433,9 @@ async function carregarFonteExterna(produto) {
         cortesias,
       };
       Object.entries(porDim).forEach(([nome, mapa]) => {
-        ind[nome] = [...mapa.entries()].map(([r, n]) => [r, n]).sort((a, b) => b[1] - a[1]);
+        ind[nome] = [...mapa.entries()]
+          .map(([r, [c, v]]) => [r, Math.round(v * 100) / 100, c])
+          .sort((a, b) => b[1] - a[1]);
       });
       Object.entries(porMetrica).forEach(([nome, arr]) => { ind[nome] = arr; });
       if (brutos > 0) {
@@ -3562,7 +3592,36 @@ const getAB2025 = (mes) => {
   };
 };
 
+// A&B: total líquido da planilha + Fini. O Fini ainda não tem fonte própria,
+// então segue como constante manual até ganhar a mesma automação.
+// Atualizar aqui sempre que Samuel mandar um novo total de Fini.
+const FINI_ATUAL = 16875.25;
+
+function indicadoresAB(ano, mes) {
+  return usaFonteExterna("consumo_ab", ano, mes)
+    ? EXTERNO.consumo_ab.indicadores?.[`${ano}-${mes}`] || null
+    : null;
+}
+
+function resumoAB(ano, mes) {
+  const gravado = ano === 2026 ? (CHAVES_AB_2026[mes] ? DADOS_AB[CHAVES_AB_2026[mes]] : null) : null;
+  const externo = serieExterna("consumo_ab", ano, mes);
+  if (!externo) return gravado;
+  const dias = {};
+  externo.forEach((r) => { dias[String(r[0])] = r[1]; });
+  const liquido = Math.round(externo.reduce((a, r) => a + r[1], 0) * 100) / 100;
+  const ind = indicadoresAB(ano, mes);
+  return {
+    total: Math.round((liquido + FINI_ATUAL) * 100) / 100,
+    dias,
+    produtos: ind?.produtos?.length ? ind.produtos : gravado?.produtos || [],
+    lojas: ind?.lojas?.length ? ind.lojas.map((l) => [l[0], l[1]]) : gravado?.lojas || [],
+    fine: { total: FINI_ATUAL, dias: {} },
+  };
+}
+
 const getABMes = (ano, mes) => {
+  if (usaFonteExterna("consumo_ab", ano, mes)) return resumoAB(ano, mes);
   if (ano === 2026) { const c = CHAVES_AB_2026[mes]; return c ? DADOS_AB[c] : null; }
   if (ano === 2025) return getAB2025(mes);
   return null;
