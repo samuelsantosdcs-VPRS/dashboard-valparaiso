@@ -1026,10 +1026,9 @@ const FONTES_EXTERNAS = {
       competencia: ["competencia"],
       hora: ["data_hora_acesso", "hora_acesso"],
     },
-    // A catraca registra releituras do mesmo código em poucos segundos.
-    // O relatório do Multiclubes usa "acessos únicos por dia", e o painel
-    // sempre trabalhou nessa base, então mantemos o mesmo critério.
-    dedup: ["codigo_barras"],
+    // SEM deduplicação. Um mesmo ingresso pode liberar a passagem de mais de
+    // uma pessoa, e a catraca registra cada passagem. Código repetido não é
+    // erro de leitura, é gente entrando. Cada linha vale um acesso.
     // Dimensões viram contagens prontas para os indicadores.
     dimensoes: {
       grupos: ["grupo_publico"],
@@ -1171,6 +1170,8 @@ async function carregarFonteExterna(produto) {
     const iComp = acha(f.colunas.competencia);
     const iVisita = acha(f.colunas.visita);
     const iDedup = f.dedup ? acha(f.dedup) : -1;
+    const iDedupHora = f.dedupHora ? acha(f.dedupHora) : -1;
+    const janelaDedup = f.dedupJanelaSegundos || 0;
     const dims = {};
     Object.entries(f.dimensoes || {}).forEach(([nome, apelidos]) => {
       const i = acha(apelidos);
@@ -1204,7 +1205,8 @@ async function carregarFonteExterna(produto) {
       const porPagto = new Map();   // forma → [valor, ingressos, Set(pedidos)]
       const antec = [];             // antecedência em dias, um item por ingresso
       let parcelasSoma = 0, parcelasN = 0, cortesias = 0;
-      const vistos = new Set();     // chave de deduplicação
+      const vistos = new Map();     // código → segundos da última leitura no dia
+      let brutos = 0, descartados = 0;
       const porDim = {};            // dimensão → Map(rótulo → contagem)
       Object.keys(dims).forEach((n) => { porDim[n] = new Map(); });
       const porPessoa = new Map();
@@ -1241,11 +1243,22 @@ async function carregarFonteExterna(produto) {
         const d = diaEMes(l[iData]);
         if (!d || d.ano !== ano || d.mes !== mes) continue;
 
-        // Releitura do mesmo código no mesmo dia conta uma vez só.
-        if (iDedup >= 0) {
+        // Releitura do mesmo código dentro da janela conta uma vez só.
+        // Sem janela configurada, vale o dia inteiro.
+        if (iDedup >= 0 && l[iDedup]) {
+          brutos += 1;
           const chaveUnica = `${d.dia}|${l[iDedup]}`;
-          if (vistos.has(chaveUnica)) continue;
-          vistos.add(chaveUnica);
+          const mh = iDedupHora >= 0 ? /(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(l[iDedupHora] || "")) : null;
+          const segundos = mh ? (+mh[1]) * 3600 + (+mh[2]) * 60 + (+(mh[3] || 0)) : null;
+          const anterior = vistos.get(chaveUnica);
+          if (anterior !== undefined) {
+            const dentroDaJanela =
+              janelaDedup > 0 && segundos !== null && anterior !== null
+                ? Math.abs(segundos - anterior) <= janelaDedup
+                : true; // sem hora ou sem janela: comporta-se como dia inteiro
+            if (dentroDaJanela) { descartados += 1; continue; }
+          }
+          vistos.set(chaveUnica, segundos);
         }
 
         Object.entries(dims).forEach(([nome, idx]) => {
@@ -1351,6 +1364,11 @@ async function carregarFonteExterna(produto) {
       Object.entries(porDim).forEach(([nome, mapa]) => {
         ind[nome] = [...mapa.entries()].map(([r, n]) => [r, n]).sort((a, b) => b[1] - a[1]);
       });
+      if (brutos > 0) {
+        ind.linhasBrutas = brutos;
+        ind.descartadosDedup = descartados;
+        ind.janelaDedup = janelaDedup;
+      }
       if (f.gruposPagantes && ind.grupos) {
         const total = ind.grupos.reduce((a, g) => a + g[1], 0);
         const pagantes = ind.grupos
@@ -1426,6 +1444,21 @@ function serieAcesso(ano, mes) {
   const externo = serieExterna("acesso", ano, mes);
   if (externo) return externo.map((r) => [r[0], r[1]]);
   return DADOS_ACESSO.diario?.[`${ano}-${mes}`] || [];
+}
+
+// Resumo mensal de acesso, com o total da planilha por cima quando ligada.
+// Sem isso a aba de Acesso mostrava o número gravado e a Visão Executiva
+// mostrava o da planilha, dois valores diferentes para a mesma coisa.
+function resumoAcesso(ano, mes) {
+  const gravado = DADOS_ACESSO.mensal[`${ano}-${mes}`];
+  const total = totalExterno("acesso", ano, mes);
+  if (total === null || total === undefined) return gravado;
+  const ind = indicadoresAcesso(ano, mes);
+  return {
+    ...(gravado || {}),
+    total: Math.round(total),
+    categorias: ind?.titulos?.length ? ind.titulos.slice(0, 12) : gravado?.categorias || [],
+  };
 }
 
 function indicadoresAcesso(ano, mes) {
@@ -1677,13 +1710,16 @@ export default function App() {
       const total = totalExterno(pid, ano, mes);
       const reserva = OVERRIDES_DIRETORIA[`${ano}-${mes}`]?.produtos?.[pid];
       const dif = total != null && reserva != null ? total - reserva : 0;
-      const base = `${f.rotulo} pela planilha às ${hora} · ${formatBRL(total)} em ${est.linhas} lançamentos`;
+      const ehContagem = pid === "acesso";
+      const fmt = (v) => (ehContagem ? Math.round(v).toLocaleString("pt-BR") : formatBRL(v));
+      const unidade = ehContagem ? "acessos" : "lançamentos";
+      const base = `${f.rotulo} pela planilha às ${hora} · ${fmt(total)} ${unidade}`;
       // A planilha é a fonte; o número no código é reserva. Se a reserva ficou
       // para trás, isso é só informativo, não é erro.
       if (Math.abs(dif) > 0.5) {
         return {
           pid, cor: "#10b981",
-          texto: `${base} · o painel está usando este valor. A reserva gravada no código (${formatBRL(reserva)}) está ${dif > 0 ? "atrás" : "à frente"} em ${formatBRL(Math.abs(dif))}.`,
+          texto: `${base} · o painel está usando este valor. A reserva gravada no código (${fmt(reserva)}) está ${dif > 0 ? "atrás" : "à frente"} em ${fmt(Math.abs(dif))}.`,
         };
       }
       return { pid, cor: "#10b981", texto: base };
@@ -6919,7 +6955,7 @@ function getReceitaMes(produtoId, ano, mes) {
       return { valor: d.pago, unidades: d.empresas_pagantes, temDados: true };
     }
     case "acesso": {
-      const d = DADOS_ACESSO.mensal[key];
+      const d = resumoAcesso(ano, mes);
       if (!d || d.total === 0) return null;
       return { valor: 0, unidades: d.total, temDados: true, ehContagem: true };
     }
@@ -8506,8 +8542,8 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
   const chave = `${ano}-${mes}`;
   const chaveAnt = `${ano - 1}-${mes}`;
-  const dados = DADOS_ACESSO.mensal[chave];
-  const dadosAnt = DADOS_ACESSO.mensal[chaveAnt];
+  const dados = resumoAcesso(ano, mes);
+  const dadosAnt = resumoAcesso(ano - 1, mes);
 
   if (!dados) {
     return (
@@ -8533,10 +8569,10 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   for (let m = 1; m <= 12; m++) {
     const linha = { mes: meses[m - 1].slice(0, 3) };
     [2025, 2026].forEach((a) => {
-      const d = DADOS_ACESSO.mensal[`${a}-${m}`];
+      const d = resumoAcesso(a, m);
       if (d) linha[String(a)] = d.total;
     });
-    const d25 = DADOS_ACESSO.mensal[`2025-${m}`];
+    const d25 = resumoAcesso(2025, m);
     if (d25) linha["Meta 2026"] = d25.total * 1.2;
     serieAnual.push(linha);
   }
@@ -8659,7 +8695,8 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
               <section className="card rounded-xl p-6">
                 <h3 className="display-font text-xl font-light mb-1">Composição do público</h3>
                 <p className="text-stone-500 text-xs mb-4">
-                  {total.toLocaleString("pt-BR")} acessos únicos por dia no mês
+                  {total.toLocaleString("pt-BR")} acessos no mês · cada passagem registrada
+                  na catraca conta uma vez, inclusive código repetido
                 </p>
                 <Barra lista={ind.grupos} cor="#10b981" />
               </section>
@@ -9064,9 +9101,9 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
             <tbody>
               {[2025, 2026].flatMap((a) =>
                 Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
-                  const d = DADOS_ACESSO.mensal[`${a}-${m}`];
+                  const d = resumoAcesso(a, m);
                   if (!d) return null;
-                  const dAnt = DADOS_ACESSO.mensal[`${a - 1}-${m}`];
+                  const dAnt = resumoAcesso(a - 1, m);
                   const meta = dAnt ? Math.round(dAnt.total * 1.2) : null;
                   const atingim = meta ? (d.total / meta) * 100 : null;
                   const diario = serieAcesso(a, m);
