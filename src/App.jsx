@@ -1013,6 +1013,35 @@ const FONTES_EXTERNAS = {
       cortesia: ["cortesia"],
     },
   },
+  acesso: {
+    rotulo: "Acesso",
+    ativo: true,
+    meses: ["2026-8"],
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=1256819127&single=true&output=csv",
+    // Cada linha é uma leitura de catraca. "quantidade" vale 1, então somar
+    // o valor equivale a contar acessos e a máquina genérica serve.
+    colunas: {
+      data: ["data_acesso", "data_hora_acesso"],
+      valor: ["quantidade"],
+      competencia: ["competencia"],
+      hora: ["data_hora_acesso", "hora_acesso"],
+    },
+    // A catraca registra releituras do mesmo código em poucos segundos.
+    // O relatório do Multiclubes usa "acessos únicos por dia", e o painel
+    // sempre trabalhou nessa base, então mantemos o mesmo critério.
+    dedup: ["codigo_barras"],
+    // Dimensões viram contagens prontas para os indicadores.
+    dimensoes: {
+      grupos: ["grupo_publico"],
+      fontes: ["fonte"],
+      faixas: ["faixa_horario"],
+      dispositivos: ["dispositivo"],
+      titulos: ["tipo_titulo"],
+      entradas: ["tipo_entrada"],
+    },
+    // Grupos que representam público pagante, para o per capita.
+    gruposPagantes: ["Ingresso pago", "Assinante V+", "Grupos e eventos"],
+  },
 };
 
 // Nome completo em caixa alta → nome curto usado no painel. É por ele que o
@@ -1141,6 +1170,13 @@ async function carregarFonteExterna(produto) {
     const iStatus = acha(f.colunas.status);
     const iComp = acha(f.colunas.competencia);
     const iVisita = acha(f.colunas.visita);
+    const iDedup = f.dedup ? acha(f.dedup) : -1;
+    const dims = {};
+    Object.entries(f.dimensoes || {}).forEach(([nome, apelidos]) => {
+      const i = acha(apelidos);
+      if (i >= 0) dims[nome] = i;
+    });
+
     const iHora = acha(f.colunas.hora);
     const iUsado = acha(f.colunas.utilizado);
     const iAntec = acha(f.colunas.antecedencia);
@@ -1168,6 +1204,9 @@ async function carregarFonteExterna(produto) {
       const porPagto = new Map();   // forma → [valor, ingressos, Set(pedidos)]
       const antec = [];             // antecedência em dias, um item por ingresso
       let parcelasSoma = 0, parcelasN = 0, cortesias = 0;
+      const vistos = new Set();     // chave de deduplicação
+      const porDim = {};            // dimensão → Map(rótulo → contagem)
+      Object.keys(dims).forEach((n) => { porDim[n] = new Map(); });
       const porPessoa = new Map();
 
       for (let i = 1; i < linhas.length; i++) {
@@ -1201,6 +1240,18 @@ async function carregarFonteExterna(produto) {
         if (iComp >= 0 && (l[iComp] || "").trim() !== comp) continue;
         const d = diaEMes(l[iData]);
         if (!d || d.ano !== ano || d.mes !== mes) continue;
+
+        // Releitura do mesmo código no mesmo dia conta uma vez só.
+        if (iDedup >= 0) {
+          const chaveUnica = `${d.dia}|${l[iDedup]}`;
+          if (vistos.has(chaveUnica)) continue;
+          vistos.add(chaveUnica);
+        }
+
+        Object.entries(dims).forEach(([nome, idx]) => {
+          const rot = (l[idx] || "").trim() || "Sem informação";
+          porDim[nome].set(rot, (porDim[nome].get(rot) || 0) + 1);
+        });
 
         const valor = paraNumero(l[iValor]);
         const atualDia = porDia.get(d.dia) || [0, 0, new Set()];
@@ -1297,7 +1348,21 @@ async function carregarFonteExterna(produto) {
         parcelasMedia: parcelasN ? Math.round((parcelasSoma / parcelasN) * 10) / 10 : null,
         cortesias,
       };
-      if (ind.utilizacao.length || ind.bilhetes.length || ind.antecedencia.n) indicadores[chave] = ind;
+      Object.entries(porDim).forEach(([nome, mapa]) => {
+        ind[nome] = [...mapa.entries()].map(([r, n]) => [r, n]).sort((a, b) => b[1] - a[1]);
+      });
+      if (f.gruposPagantes && ind.grupos) {
+        const total = ind.grupos.reduce((a, g) => a + g[1], 0);
+        const pagantes = ind.grupos
+          .filter((g) => f.gruposPagantes.includes(g[0]))
+          .reduce((a, g) => a + g[1], 0);
+        ind.totalAcessos = total;
+        ind.pagantes = pagantes;
+        ind.naoPagantes = total - pagantes;
+      }
+      if (ind.utilizacao.length || ind.bilhetes.length || ind.antecedencia.n || Object.keys(porDim).length) {
+        indicadores[chave] = ind;
+      }
 
       if (porPessoa.size > 0) {
         pessoas[chave] = [...porPessoa.entries()]
@@ -1356,6 +1421,19 @@ function calendarioVisitaOnline(ano, mes) {
 }
 
 // Mapa dia da semana × hora da compra, com a planilha por cima quando ligada.
+// Série diária de acesso, com a planilha por cima quando ligada.
+function serieAcesso(ano, mes) {
+  const externo = serieExterna("acesso", ano, mes);
+  if (externo) return externo.map((r) => [r[0], r[1]]);
+  return DADOS_ACESSO.diario?.[`${ano}-${mes}`] || [];
+}
+
+function indicadoresAcesso(ano, mes) {
+  return usaFonteExterna("acesso", ano, mes)
+    ? EXTERNO.acesso.indicadores?.[`${ano}-${mes}`] || null
+    : null;
+}
+
 function indicadoresOnline(ano, mes) {
   return usaFonteExterna("bilheteria_online", ano, mes)
     ? EXTERNO.bilheteria_online.indicadores?.[`${ano}-${mes}`] || null
@@ -6719,7 +6797,7 @@ function serieDiariaProduto(produtoId, ano, mes) {
       return out;
     }
     case "acesso": {
-      const diario = DADOS_ACESSO.diario[key];
+      const diario = serieAcesso(ano, mes);
       if (!diario) return null;
       diario.forEach((r) => { out[r[0]] = { valor: 0, unidades: r[1] }; });
       return out;
@@ -8465,8 +8543,8 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
   // Série diária
   const diasMes = new Date(ano, mes, 0).getDate();
-  const diario = DADOS_ACESSO.diario[chave] || [];
-  const diarioAnt = DADOS_ACESSO.diario[chaveAnt] || [];
+  const diario = serieAcesso(ano, mes);
+  const diarioAnt = serieAcesso(ano - 1, mes);
   const mapDia = new Map(diario.map((r) => [r[0], r[1]]));
   const mapDiaAnt = new Map(diarioAnt.map((r) => [r[0], r[1]]));
   const serieDiaria = [];
@@ -8527,6 +8605,96 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           neutral
         />
       </section>
+      {/* INDICADORES DE PÚBLICO — vindos da planilha de acesso */}
+      {(() => {
+        const ind = indicadoresAcesso(ano, mes);
+        if (!ind || !ind.grupos) return null;
+
+        const total = ind.totalAcessos || 0;
+        const pct = (n) => (total > 0 ? (n / total) * 100 : 0);
+        const acha = (lista, nome) => (lista || []).find((g) => g[0] === nome)?.[1] || 0;
+        const assinantes = acha(ind.grupos, "Assinante V+") + acha(ind.grupos, "Curinga / cortesia");
+        const pagos = acha(ind.grupos, "Ingresso pago");
+
+        const maiorFaixa = Math.max(1, ...(ind.faixas || []).map((f) => f[1]));
+        const faixasOrd = [...(ind.faixas || [])].sort(
+          (a, b) => (parseInt(a[0], 10) || 0) - (parseInt(b[0], 10) || 0)
+        );
+        const picoFaixa = [...(ind.faixas || [])].sort((a, b) => b[1] - a[1])[0];
+
+        const Barra = ({ lista, cor, limite = 8 }) => (
+          <>
+            {(lista || []).slice(0, limite).map(([rot, n]) => (
+              <div key={rot} className="flex items-center gap-3 py-1.5">
+                <span className="text-xs text-stone-400 truncate" style={{ width: 150 }} title={rot}>{rot}</span>
+                <div className="flex-1 h-4 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
+                  <div className="h-full rounded" style={{ width: `${pct(n) * (100 / Math.max(1, pct(lista[0][1])))}%`, background: cor }} />
+                </div>
+                <span className="mono-font text-xs text-stone-300" style={{ width: 96, textAlign: "right" }}>
+                  {n.toLocaleString("pt-BR")}<span className="text-stone-600"> · {pct(n).toFixed(1)}%</span>
+                </span>
+              </div>
+            ))}
+          </>
+        );
+
+        return (
+          <>
+            <section className="kpi-grid mb-6">
+              <KPICard icon={<Users size={16} />} label="Público pagante"
+                value={(ind.pagantes || 0).toLocaleString("pt-BR")}
+                sub={`${pct(ind.pagantes || 0).toFixed(1)}% do movimento`} />
+              <KPICard icon={<AlertCircle size={16} />} label="Não pagante"
+                value={(ind.naoPagantes || 0).toLocaleString("pt-BR")}
+                sub={`${pct(ind.naoPagantes || 0).toFixed(1)}% · cortesias, convidados e interno`} />
+              <KPICard icon={<Crown size={16} />} label="Assinantes e curingas"
+                value={assinantes.toLocaleString("pt-BR")}
+                sub={`${pct(assinantes).toFixed(1)}% · ingresso avulso: ${pct(pagos).toFixed(1)}%`} />
+              <KPICard icon={<Clock size={16} />} label="Faixa de pico"
+                value={picoFaixa ? picoFaixa[0] : "—"}
+                sub={picoFaixa ? `${picoFaixa[1].toLocaleString("pt-BR")} acessos · ${pct(picoFaixa[1]).toFixed(1)}% do dia` : "—"} />
+            </section>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24 }} className="mb-6">
+              <section className="card rounded-xl p-6">
+                <h3 className="display-font text-xl font-light mb-1">Composição do público</h3>
+                <p className="text-stone-500 text-xs mb-4">
+                  {total.toLocaleString("pt-BR")} acessos únicos por dia no mês
+                </p>
+                <Barra lista={ind.grupos} cor="#10b981" />
+              </section>
+
+              <section className="card rounded-xl p-6">
+                <h3 className="display-font text-xl font-light mb-1">Chegada por faixa de horário</h3>
+                <p className="text-stone-500 text-xs mb-4">Dimensiona escala de bilheteria e de A&B</p>
+                <Barra lista={faixasOrd} cor="#06b6d4" limite={24} />
+              </section>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24 }} className="mb-6">
+              <section className="card rounded-xl p-6">
+                <h3 className="display-font text-xl font-light mb-1">Origem do acesso</h3>
+                <p className="text-stone-500 text-xs mb-4">Catraca, e-commerce e quiosque</p>
+                <Barra lista={ind.fontes} cor="#a855f7" />
+              </section>
+
+              <section className="card rounded-xl p-6">
+                <h3 className="display-font text-xl font-light mb-1">Fluxo por catraca</h3>
+                <p className="text-stone-500 text-xs mb-4">Onde abrir entrada extra no pico</p>
+                <Barra lista={ind.dispositivos} cor="#f59e0b" />
+              </section>
+            </div>
+
+            <section className="card rounded-xl p-6 mb-6">
+              <h3 className="display-font text-xl font-light mb-1">Tipos de entrada</h3>
+              <p className="text-stone-500 text-xs mb-4">Detalhe por trás dos grupos, ordenado por volume</p>
+              <Barra lista={ind.entradas} cor="#ef4444" limite={14} />
+            </section>
+          </>
+        );
+      })()}
+
+
 
       {/* META +20% */}
       {metaAcessos && metaAcessos > 0 && (
@@ -8901,7 +9069,7 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
                   const dAnt = DADOS_ACESSO.mensal[`${a - 1}-${m}`];
                   const meta = dAnt ? Math.round(dAnt.total * 1.2) : null;
                   const atingim = meta ? (d.total / meta) * 100 : null;
-                  const diario = DADOS_ACESSO.diario[`${a}-${m}`] || [];
+                  const diario = serieAcesso(a, m);
                   const media = diario.length > 0 ? Math.round(d.total / diario.length) : 0;
                   const ehAtual = a === ano && m === mes;
                   return (
