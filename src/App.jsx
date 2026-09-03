@@ -1013,6 +1013,34 @@ const FONTES_EXTERNAS = {
       cortesia: ["cortesia"],
     },
   },
+  bilheteria_park: {
+    rotulo: "B. Park",
+    ativo: true,
+    meses: ["2026-8"],
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=440761211&single=true&output=csv",
+    colunas: {
+      data: ["data_pagamento"],
+      valor: ["valor_pago"],
+      competencia: ["competencia"],
+      hora: ["data_hora_pagamento"],
+      movimento: ["movimento"],
+    },
+    // Só "Venda" conta na receita: "Devolução" precisa ficar de fora,
+    // igual à regra que já valia para o CSV manual do Multiclubes.
+    movimentoValido: "Venda",
+    dimensoes: {
+      produtos: ["produto_completo"],
+      operadores: ["operador"],
+      publicos: ["publico"],
+      tarifas: ["tarifa"],
+      pagamentos: ["forma_pagamento"],
+    },
+    // Colunas numéricas cruas: cada valor vira um item de uma lista, para
+    // tirar média/mediana depois (ex.: tempo até pagamento).
+    metricas: {
+      tempos_pagamento: ["minutos_ate_pagamento"],
+    },
+  },
   acesso: {
     rotulo: "Acesso",
     ativo: true,
@@ -1169,6 +1197,7 @@ async function carregarFonteExterna(produto) {
     const iStatus = acha(f.colunas.status);
     const iComp = acha(f.colunas.competencia);
     const iVisita = acha(f.colunas.visita);
+    const iMovimento = acha(f.colunas.movimento);
     const iDedup = f.dedup ? acha(f.dedup) : -1;
     const iDedupHora = f.dedupHora ? acha(f.dedupHora) : -1;
     const janelaDedup = f.dedupJanelaSegundos || 0;
@@ -1176,6 +1205,11 @@ async function carregarFonteExterna(produto) {
     Object.entries(f.dimensoes || {}).forEach(([nome, apelidos]) => {
       const i = acha(apelidos);
       if (i >= 0) dims[nome] = i;
+    });
+    const metrs = {};
+    Object.entries(f.metricas || {}).forEach(([nome, apelidos]) => {
+      const i = acha(apelidos);
+      if (i >= 0) metrs[nome] = i;
     });
 
     const iHora = acha(f.colunas.hora);
@@ -1209,6 +1243,8 @@ async function carregarFonteExterna(produto) {
       let brutos = 0, descartados = 0;
       const porDim = {};            // dimensão → Map(rótulo → contagem)
       Object.keys(dims).forEach((n) => { porDim[n] = new Map(); });
+      const porMetrica = {};        // métrica → array de valores numéricos
+      Object.keys(metrs).forEach((n) => { porMetrica[n] = []; });
       const porPessoa = new Map();
 
       for (let i = 1; i < linhas.length; i++) {
@@ -1239,6 +1275,9 @@ async function carregarFonteExterna(produto) {
           }
         }
 
+        // "movimento" exige o valor exato (ex.: "Venda"), diferente do
+        // prefixo "aprovad" usado no e-commerce.
+        if (iMovimento >= 0 && f.movimentoValido && (l[iMovimento] || "").trim() !== f.movimentoValido) continue;
         if (iComp >= 0 && (l[iComp] || "").trim() !== comp) continue;
         const d = diaEMes(l[iData]);
         if (!d || d.ano !== ano || d.mes !== mes) continue;
@@ -1264,6 +1303,10 @@ async function carregarFonteExterna(produto) {
         Object.entries(dims).forEach(([nome, idx]) => {
           const rot = (l[idx] || "").trim() || "Sem informação";
           porDim[nome].set(rot, (porDim[nome].get(rot) || 0) + 1);
+        });
+        Object.entries(metrs).forEach(([nome, idx]) => {
+          const v = paraNumero(l[idx]);
+          if (Number.isFinite(v)) porMetrica[nome].push(v);
         });
 
         const valor = paraNumero(l[iValor]);
@@ -1364,6 +1407,7 @@ async function carregarFonteExterna(produto) {
       Object.entries(porDim).forEach(([nome, mapa]) => {
         ind[nome] = [...mapa.entries()].map(([r, n]) => [r, n]).sort((a, b) => b[1] - a[1]);
       });
+      Object.entries(porMetrica).forEach(([nome, arr]) => { ind[nome] = arr; });
       if (brutos > 0) {
         ind.linhasBrutas = brutos;
         ind.descartadosDedup = descartados;
@@ -1459,6 +1503,31 @@ function resumoAcesso(ano, mes) {
     total: Math.round(total),
     categorias: ind?.titulos?.length ? ind.titulos.slice(0, 12) : gravado?.categorias || [],
   };
+}
+
+// Resumo mensal da Bilheteria Park, com a planilha por cima quando ligada.
+function resumoParque(ano, mes) {
+  const gravado = DADOS_BILHETERIA_FISICA.mensal[`${ano}-${mes}`];
+  const externo = serieExterna("bilheteria_park", ano, mes);
+  if (!externo) return gravado;
+  const total = externo.reduce((a, r) => a + r[1], 0);
+  const ingressos = externo.reduce((a, r) => a + (r[2] || 0), 0);
+  const ind = indicadoresParque(ano, mes);
+  return {
+    ...(gravado || {}),
+    total: Math.round(total * 100) / 100,
+    total_ingressos: ingressos,
+    ticket_medio: ingressos > 0 ? Math.round((total / ingressos) * 100) / 100 : 0,
+    dias: externo.map((r) => [r[0], r[1], r[2]]),
+    produtos: ind?.produtos?.length ? ind.produtos.map((p) => [p[0], p[1], p[2]]) : gravado?.produtos || [],
+    operadores: ind?.operadores?.length ? ind.operadores.map((p) => [p[0], p[1], p[2]]) : gravado?.operadores || [],
+  };
+}
+
+function indicadoresParque(ano, mes) {
+  return usaFonteExterna("bilheteria_park", ano, mes)
+    ? EXTERNO.bilheteria_park.indicadores?.[`${ano}-${mes}`] || null
+    : null;
 }
 
 function indicadoresAcesso(ano, mes) {
@@ -6272,8 +6341,8 @@ function BilheteriaFisicaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
   const chave = `${ano}-${mes}`;
   const chaveAnt = `${ano - 1}-${mes}`;
-  const dados = DADOS_BILHETERIA_FISICA.mensal[chave];
-  const dadosAnt = DADOS_BILHETERIA_FISICA.mensal[chaveAnt];
+  const dados = resumoParque(ano, mes);
+  const dadosAnt = resumoParque(ano - 1, mes);
 
   if (!dados) {
     return (
@@ -6361,10 +6430,10 @@ function BilheteriaFisicaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   for (let m = 1; m <= 12; m++) {
     const linha = { mes: meses[m - 1].slice(0, 3) };
     ["2025", "2026"].forEach((a) => {
-      const d = DADOS_BILHETERIA_FISICA.mensal[`${a}-${m}`];
+      const d = resumoParque(a, m);
       if (d) linha[a] = d.total;
     });
-    const d25 = DADOS_BILHETERIA_FISICA.mensal[`2025-${m}`];
+    const d25 = resumoParque(2025, m);
     if (d25) linha["Meta 2026"] = d25.total * 1.2;
     serieAnual.push(linha);
   }
@@ -6403,6 +6472,81 @@ function BilheteriaFisicaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           neutral
         />
       </section>
+
+      {/* INDICADORES DE OPERAÇÃO — vindos da planilha da Bilheteria Park */}
+      {(() => {
+        const ind = indicadoresParque(ano, mes);
+        if (!ind) return null;
+
+        const tempos = ind.tempos_pagamento || [];
+        const tempoMedio = tempos.length
+          ? Math.round((tempos.reduce((a, b) => a + b, 0) / tempos.length) * 10) / 10
+          : null;
+
+        const totalPub = (ind.publicos || []).reduce((a, g) => a + g[1], 0);
+        const totalTar = (ind.tarifas || []).reduce((a, g) => a + g[1], 0);
+        const totalPag = (ind.pagamentos || []).reduce((a, g) => a + g[1], 0);
+
+        const Barra = ({ lista, cor, total, limite = 8 }) => {
+          const itens = (lista || []).slice(0, limite);
+          if (itens.length === 0) return null;
+          const maior = Math.max(...itens.map((i) => i[1]), 1);
+          return (
+            <>
+              {itens.map(([rot, n]) => (
+                <div key={rot} className="flex items-center gap-3 py-1.5">
+                  <span className="text-xs text-stone-400 truncate" style={{ width: 150 }} title={rot}>{rot}</span>
+                  <div className="flex-1 h-4 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <div className="h-full rounded" style={{ width: `${Math.min(100, (n / maior) * 100)}%`, background: cor }} />
+                  </div>
+                  <span className="mono-font text-xs text-stone-300 shrink-0" style={{ width: 96, textAlign: "right" }}>
+                    {n.toLocaleString("pt-BR")}
+                    <span className="text-stone-600"> · {total > 0 ? ((n / total) * 100).toFixed(1) : 0}%</span>
+                  </span>
+                </div>
+              ))}
+            </>
+          );
+        };
+
+        return (
+          <>
+            <section className="kpi-grid mb-6">
+              <KPICard icon={<Users size={16} />} label="Público adulto vs infantil"
+                value={(ind.publicos?.[0]?.[0]) || "—"}
+                sub={ind.publicos?.length ? `${ind.publicos[0][1].toLocaleString("pt-BR")} · ${totalPub > 0 ? ((ind.publicos[0][1] / totalPub) * 100).toFixed(1) : 0}% do total` : "—"} />
+              <KPICard icon={<Calendar size={16} />} label="Semana vs fim de semana"
+                value={ind.tarifas?.length ? `${totalTar > 0 ? ((ind.tarifas[0][1] / totalTar) * 100).toFixed(0) : 0}%` : "—"}
+                sub={ind.tarifas?.[0] ? `${ind.tarifas[0][0]}` : "—"} />
+              <KPICard icon={<Target size={16} />} label="Tempo até pagamento"
+                value={tempoMedio !== null ? `${tempoMedio} min` : "—"}
+                sub={tempos.length ? `${tempos.length.toLocaleString("pt-BR")} transações no mês` : "—"} />
+              <KPICard icon={<TrendingUp size={16} />} label="Forma principal"
+                value={ind.pagamentos?.[0]?.[0] || "—"}
+                sub={ind.pagamentos?.[0] ? `${totalPag > 0 ? ((ind.pagamentos[0][1] / totalPag) * 100).toFixed(1) : 0}% das vendas` : "—"} />
+            </section>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }} className="mb-6">
+              <section className="card rounded-xl p-6">
+                <h3 className="display-font text-xl font-light mb-1">Público</h3>
+                <p className="text-stone-500 text-xs mb-4">Adulto, infantil e outras categorias</p>
+                <Barra lista={ind.publicos} cor="#10b981" total={totalPub} />
+              </section>
+              <section className="card rounded-xl p-6">
+                <h3 className="display-font text-xl font-light mb-1">Tarifa aplicada</h3>
+                <p className="text-stone-500 text-xs mb-4">Dias de semana vs fim de semana e feriado</p>
+                <Barra lista={ind.tarifas} cor="#06b6d4" total={totalTar} />
+              </section>
+            </div>
+
+            <section className="card rounded-xl p-6 mb-6">
+              <h3 className="display-font text-xl font-light mb-1">Formas de pagamento</h3>
+              <p className="text-stone-500 text-xs mb-4">Participação no valor vendido no mês</p>
+              <Barra lista={ind.pagamentos} cor="#a855f7" total={totalPag} limite={10} />
+            </section>
+          </>
+        );
+      })()}
 
       {/* META +20% YoY */}
       {metaValor && metaValor > 0 && (
@@ -6758,9 +6902,9 @@ function BilheteriaFisicaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
             <tbody>
               {[2025, 2026].flatMap((a) =>
                 Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
-                  const d = DADOS_BILHETERIA_FISICA.mensal[`${a}-${m}`];
+                  const d = resumoParque(a, m);
                   if (!d) return null;
-                  const dAnt = DADOS_BILHETERIA_FISICA.mensal[`${a - 1}-${m}`];
+                  const dAnt = resumoParque(a - 1, m);
                   const meta = dAnt ? dAnt.total * 1.2 : null;
                   const atingim = meta ? (d.total / meta) * 100 : null;
                   const ehAtual = a === ano && m === mes;
@@ -6821,7 +6965,7 @@ function serieDiariaProduto(produtoId, ano, mes) {
       return out;
     }
     case "bilheteria_park": {
-      const d = DADOS_BILHETERIA_FISICA.mensal[key];
+      const d = resumoParque(ano, mes);
       if (!d?.dias) return null;
       d.dias.forEach((r) => { out[r[0]] = { valor: r[1], unidades: r[2] || 0 }; });
       return out;
@@ -6928,7 +7072,7 @@ function getReceitaMes(produtoId, ano, mes) {
       return { valor, unidades, temDados: valor > 0 };
     }
     case "bilheteria_park": {
-      const d = DADOS_BILHETERIA_FISICA.mensal[key];
+      const d = resumoParque(ano, mes);
       if (!d) return null;
       return { valor: d.total, unidades: d.total_ingressos, temDados: true };
     }
@@ -8658,21 +8802,32 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
         );
         const picoFaixa = [...(ind.faixas || [])].sort((a, b) => b[1] - a[1])[0];
 
-        const Barra = ({ lista, cor, limite = 8 }) => (
-          <>
-            {(lista || []).slice(0, limite).map(([rot, n]) => (
-              <div key={rot} className="flex items-center gap-3 py-1.5">
-                <span className="text-xs text-stone-400 truncate" style={{ width: 150 }} title={rot}>{rot}</span>
-                <div className="flex-1 h-4 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
-                  <div className="h-full rounded" style={{ width: `${pct(n) * (100 / Math.max(1, pct(lista[0][1])))}%`, background: cor }} />
+        // A largura é proporcional ao MAIOR valor exibido, não ao primeiro da
+        // lista: em listas ordenadas por hora o primeiro item é pequeno e as
+        // barras estouravam o quadro.
+        const Barra = ({ lista, cor, limite = 8 }) => {
+          const itens = (lista || []).slice(0, limite);
+          if (itens.length === 0) return null;
+          const maior = Math.max(...itens.map((i) => i[1]), 1);
+          return (
+            <>
+              {itens.map(([rot, n]) => (
+                <div key={rot} className="flex items-center gap-3 py-1.5">
+                  <span className="text-xs text-stone-400 truncate" style={{ width: 150 }} title={rot}>{rot}</span>
+                  <div className="flex-1 h-4 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <div
+                      className="h-full rounded"
+                      style={{ width: `${Math.min(100, (n / maior) * 100)}%`, background: cor }}
+                    />
+                  </div>
+                  <span className="mono-font text-xs text-stone-300 shrink-0" style={{ width: 96, textAlign: "right" }}>
+                    {n.toLocaleString("pt-BR")}<span className="text-stone-600"> · {pct(n).toFixed(1)}%</span>
+                  </span>
                 </div>
-                <span className="mono-font text-xs text-stone-300" style={{ width: 96, textAlign: "right" }}>
-                  {n.toLocaleString("pt-BR")}<span className="text-stone-600"> · {pct(n).toFixed(1)}%</span>
-                </span>
-              </div>
-            ))}
-          </>
-        );
+              ))}
+            </>
+          );
+        };
 
         return (
           <>
