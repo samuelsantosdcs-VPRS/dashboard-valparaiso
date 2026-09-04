@@ -366,20 +366,25 @@ const OVERRIDES_DIRETORIA = {
 // não deve considerar o valor que ele fez em 2025.
 // Formato: "ANO-MÊS": [lista de produtos a excluir da meta]
 // ============================================================
+// Quiosque Ilha não fica mais excluído por calendário fixo: ele entra na
+// meta em qualquer mês, igual aos outros produtos. Um mês em que ele não
+// operou de fato aparece sozinho, via o flag `semMovimento` calculado em
+// PainelA4/VisaoExecutiva (zero receita em 2026 E em 2025), sem precisar
+// manter essa lista atualizada manualmente.
+// O Rio Anil segue fechado o ano inteiro — isso continua fixo aqui.
 const EXCLUIDOS_DA_META = {
-  // Todo 2026: Quiosque fechado
-  "2026-1": ["quiosque_ilha", "quiosque_rio_anil"],
-  "2026-2": ["quiosque_ilha", "quiosque_rio_anil"],
-  "2026-3": ["quiosque_ilha", "quiosque_rio_anil"],
-  "2026-4": ["quiosque_ilha", "quiosque_rio_anil"],
-  "2026-5": ["quiosque_ilha", "quiosque_rio_anil"],
-  "2026-6": ["quiosque_ilha", "quiosque_rio_anil"],
+  "2026-1": ["quiosque_rio_anil"],
+  "2026-2": ["quiosque_rio_anil"],
+  "2026-3": ["quiosque_rio_anil"],
+  "2026-4": ["quiosque_rio_anil"],
+  "2026-5": ["quiosque_rio_anil"],
+  "2026-6": ["quiosque_rio_anil"],
   "2026-7": ["quiosque_rio_anil"],
   "2026-8": ["quiosque_rio_anil"],
-  "2026-9": ["quiosque_ilha", "quiosque_rio_anil"],
-  "2026-10": ["quiosque_ilha", "quiosque_rio_anil"],
-  "2026-11": ["quiosque_ilha", "quiosque_rio_anil"],
-  "2026-12": ["quiosque_ilha", "quiosque_rio_anil"],
+  "2026-9": ["quiosque_rio_anil"],
+  "2026-10": ["quiosque_rio_anil"],
+  "2026-11": ["quiosque_rio_anil"],
+  "2026-12": ["quiosque_rio_anil"],
 };
 
 // ============================================================
@@ -9487,6 +9492,11 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
     // Déficit ou Superávit: realizado - expectativa
     const deficit = realizado - expectativa;
 
+    // Produto sem nenhum movimento no mês, nos dois anos: provavelmente
+    // fechado. Diferente de ehExcluido (que zera a meta por regra fixa),
+    // aqui é só um aviso — a meta continua sendo calculada normalmente.
+    const semMovimento = !ehExcluido && realizado === 0 && anoAnt === 0;
+
     return {
       ...p,
       metaGeral,
@@ -9496,6 +9506,7 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
       anoAnterior: anoAnt,
       anoAnteriorAteHoje: anoAnt * proporcaoMes,
       ehExcluido,
+      semMovimento,
     };
   });
 
@@ -9897,10 +9908,15 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
       {/* HEADERS DE PRODUTOS */}
       <div className="a4-grid">
-        {produtosDef.map((p) => (
-          <div key={p.id} className="a4-col-header">
-            <div style={{ fontSize: "11pt" }}>{p.icone}</div>
-            <div>{p.curto}</div>
+        {dados.map((d) => (
+          <div key={d.id} className="a4-col-header">
+            <div style={{ fontSize: "11pt" }}>{d.icone}</div>
+            <div>{d.curto}</div>
+            {d.semMovimento && (
+              <div style={{ fontSize: "7pt", color: "#b45309", fontWeight: 500, marginTop: "1pt" }}>
+                fechado no mês
+              </div>
+            )}
           </div>
         ))}
       </div>
