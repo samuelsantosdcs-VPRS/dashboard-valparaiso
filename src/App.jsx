@@ -1183,6 +1183,17 @@ function paraNumero(bruto) {
   return negativo ? -n : n;
 }
 
+// A coluna de competência pode vir como "2026-08" ou como uma data completa
+// ("01/08/2026", o primeiro dia do período) — aceita as duas.
+function competenciaBate(bruto, ano, mes) {
+  const t = String(bruto || "").trim();
+  if (!t) return true; // sem essa coluna na planilha: não filtra por aqui
+  const compAlvo = `${ano}-${String(mes).padStart(2, "0")}`;
+  if (t === compAlvo) return true;
+  const d = diaEMes(t);
+  return !!d && d.ano === ano && d.mes === mes;
+}
+
 // Aceita "01/08/2026", "01/08/2026 14:32" e "2026-08-01"
 function diaEMes(bruto) {
   const t = String(bruto || "").trim();
@@ -1310,7 +1321,7 @@ async function carregarFonteExterna(produto) {
         // "movimento" exige o valor exato (ex.: "Venda"), diferente do
         // prefixo "aprovad" usado no e-commerce.
         if (iMovimento >= 0 && f.movimentoValido && (l[iMovimento] || "").trim() !== f.movimentoValido) continue;
-        if (iComp >= 0 && (l[iComp] || "").trim() !== comp) continue;
+        if (iComp >= 0 && !competenciaBate(l[iComp], ano, mes)) continue;
         const d = diaEMes(l[iData]);
         if (!d || d.ano !== ano || d.mes !== mes) continue;
 
