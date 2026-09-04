@@ -1018,6 +1018,28 @@ const FONTES_EXTERNAS = {
       cortesia: ["cortesia"],
     },
   },
+  quiosque_ilha: {
+    rotulo: "Quiosque Ilha",
+    ativo: true,
+    meses: ["2026-8"],
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=388532097&single=true&output=csv",
+    // Mesmo formato de coluna do e-commerce (é o mesmo sistema de venda POS).
+    colunas: {
+      data: ["data_venda", "data/hora", "data", "data_pagamento"],
+      valor: ["valor_total", "valor_unitario", "preço", "preco", "valor"],
+      pedido: ["localizador", "pedido", "id_pedido"],
+      status: ["status"],
+      competencia: ["competencia_venda", "competencia", "competência"],
+      hora: ["data_hora_venda", "hora_venda", "data/hora"],
+      visita: ["data_visita", "data de visita"],
+      utilizado: ["utilizado"],
+      antecedencia: ["antecedencia_dias", "antecedencia"],
+      bilhete: ["bilhete", "produto", "produto_nome"],
+      pagamento: ["forma_pagamento", "forma de pagamento"],
+      parcelas: ["parcelas"],
+      cortesia: ["cortesia"],
+    },
+  },
   bilheteria_park: {
     rotulo: "B. Park",
     ativo: true,
@@ -1586,6 +1608,30 @@ function indicadoresParque(ano, mes) {
   return usaFonteExterna("bilheteria_park", ano, mes)
     ? EXTERNO.bilheteria_park.indicadores?.[`${ano}-${mes}`] || null
     : null;
+}
+
+// Resumo mensal do Quiosque Ilha, com a planilha por cima quando ligada.
+function resumoQuiosque(ano, mes) {
+  const gravado = DADOS_QUIOSQUE.mensal[`${ano}-${mes}`];
+  const externo = serieExterna("quiosque_ilha", ano, mes);
+  if (!externo) return gravado;
+  const total = externo.reduce((a, r) => a + r[1], 0);
+  const ingressos = externo.reduce((a, r) => a + (r[2] || 0), 0);
+  const localizadores = externo.reduce((a, r) => a + (r[3] || 0), 0);
+  const ind = usaFonteExterna("quiosque_ilha", ano, mes)
+    ? EXTERNO.quiosque_ilha.indicadores?.[`${ano}-${mes}`] || null
+    : null;
+  return {
+    total: Math.round(total * 100) / 100,
+    ingressos,
+    ticket_medio: ingressos > 0 ? Math.round((total / ingressos) * 100) / 100 : 0,
+    localizadores,
+    dias: externo.map((r) => [r[0], r[1], r[2]]),
+    produtos: ind?.bilhetes?.length
+      ? ind.bilhetes.map((b) => [b[0], b[1], b[2]])
+      : gravado?.produtos || [],
+    categorias: gravado?.categorias || [],
+  };
 }
 
 function indicadoresAcesso(ano, mes) {
@@ -7196,7 +7242,7 @@ function getReceitaMes(produtoId, ano, mes) {
       return { valor: 0, unidades: d.total, temDados: true, ehContagem: true };
     }
     case "quiosque_ilha": {
-      const d = DADOS_QUIOSQUE.mensal[key];
+      const d = resumoQuiosque(ano, mes);
       if (!d || d.total === 0) return null;
       return { valor: d.total, unidades: d.ingressos || 0, temDados: true };
     }
@@ -7208,8 +7254,8 @@ function getReceitaMes(produtoId, ano, mes) {
 
 function QuiosqueView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   const chave = `${ano}-${mes}`;
-  const dados = DADOS_QUIOSQUE.mensal[chave];
-  const dadosAnt = DADOS_QUIOSQUE.mensal[`${ano - 1}-${mes}`];
+  const dados = resumoQuiosque(ano, mes);
+  const dadosAnt = resumoQuiosque(ano - 1, mes);
 
   if (!dados || !dados.dias || dados.dias.length === 0) {
     return (
