@@ -1058,6 +1058,11 @@ const FONTES_EXTERNAS = {
     },
     excluirColuna: "loja",
     excluirValores: ["DIGA X", "JOAO & TANNA"],
+    // A planilha passou a trazer o Fini junto, como linhas de movimentação
+    // com loja = "FINE". Essas linhas viram a série do Fini, não entram no
+    // A&B líquido nem nos rankings de loja/categoria/produto.
+    fineColuna: "loja",
+    fineValor: "FINE",
     dimensoes: {
       lojas: ["loja"],
       categorias: ["categoria"],
@@ -1223,6 +1228,7 @@ async function carregarFonteExterna(produto) {
     const iVisita = acha(f.colunas.visita);
     const iMovimento = acha(f.colunas.movimento);
     const iExcl = f.excluirColuna ? acha([f.excluirColuna]) : -1;
+    const iFine = f.fineColuna ? acha([f.fineColuna]) : -1;
     const iDedup = f.dedup ? acha(f.dedup) : -1;
     const iDedupHora = f.dedupHora ? acha(f.dedupHora) : -1;
     const janelaDedup = f.dedupJanelaSegundos || 0;
@@ -1266,7 +1272,8 @@ async function carregarFonteExterna(produto) {
       let parcelasSoma = 0, parcelasN = 0, cortesias = 0;
       const vistos = new Map();     // código → segundos da última leitura no dia
       let brutos = 0, descartados = 0;
-      const porDim = {};            // dimensão → Map(rótulo → contagem)
+      const porFine = new Map();    // dia → valor somado das linhas de Fini
+      const porDim = {};            // dimensão → Map(rótulo → [contagem, valorSomado])
       Object.keys(dims).forEach((n) => { porDim[n] = new Map(); });
       const porMetrica = {};        // métrica → array de valores numéricos
       Object.keys(metrs).forEach((n) => { porMetrica[n] = []; });
@@ -1303,10 +1310,15 @@ async function carregarFonteExterna(produto) {
         // "movimento" exige o valor exato (ex.: "Venda"), diferente do
         // prefixo "aprovad" usado no e-commerce.
         if (iMovimento >= 0 && f.movimentoValido && (l[iMovimento] || "").trim() !== f.movimentoValido) continue;
-        if (iExcl >= 0 && (f.excluirValores || []).includes((l[iExcl] || "").trim())) continue;
         if (iComp >= 0 && (l[iComp] || "").trim() !== comp) continue;
         const d = diaEMes(l[iData]);
         if (!d || d.ano !== ano || d.mes !== mes) continue;
+
+        if (iFine >= 0 && (l[iFine] || "").trim() === f.fineValor) {
+          porFine.set(d.dia, (porFine.get(d.dia) || 0) + paraNumero(l[iValor]));
+          continue; // linha do Fini: some aqui, não entra no A&B
+        }
+        if (iExcl >= 0 && (f.excluirValores || []).includes((l[iExcl] || "").trim())) continue;
 
         // Releitura do mesmo código dentro da janela conta uma vez só.
         // Sem janela configurada, vale o dia inteiro.
@@ -1437,6 +1449,11 @@ async function carregarFonteExterna(produto) {
           .map(([r, [c, v]]) => [r, Math.round(v * 100) / 100, c])
           .sort((a, b) => b[1] - a[1]);
       });
+      if (porFine.size > 0) {
+        ind.fineDias = [...porFine.entries()].sort((a, b) => a[0] - b[0])
+          .map(([d, v]) => [d, Math.round(v * 100) / 100]);
+        ind.fineTotal = Math.round(ind.fineDias.reduce((a, r) => a + r[1], 0) * 100) / 100;
+      }
       Object.entries(porMetrica).forEach(([nome, arr]) => { ind[nome] = arr; });
       if (brutos > 0) {
         ind.linhasBrutas = brutos;
@@ -3611,15 +3628,20 @@ function resumoAB(ano, mes) {
   externo.forEach((r) => { dias[String(r[0])] = r[1]; });
   const liquido = Math.round(externo.reduce((a, r) => a + r[1], 0) * 100) / 100;
   const ind = indicadoresAB(ano, mes);
+  // O Fini agora vem junto na mesma planilha (linhas com loja = "FINE").
+  // FINI_ATUAL fica só como reserva, para meses em que essas linhas faltarem.
+  const temFineReal = ind?.fineDias?.length > 0;
+  const fineTotal = temFineReal ? ind.fineTotal : FINI_ATUAL;
+  const fineDias = {};
+  if (temFineReal) ind.fineDias.forEach((r) => { fineDias[String(r[0])] = r[1]; });
   return {
-    total: Math.round((liquido + FINI_ATUAL) * 100) / 100,
+    total: Math.round((liquido + fineTotal) * 100) / 100,
     dias,
     produtos: ind?.produtos?.length ? ind.produtos : gravado?.produtos || [],
     lojas: ind?.lojas?.length ? ind.lojas.map((l) => [l[0], l[1]]) : gravado?.lojas || [],
-    fine: { total: FINI_ATUAL, dias: {} },
+    fine: { total: fineTotal, dias: fineDias },
   };
 }
-
 const getABMes = (ano, mes) => {
   if (usaFonteExterna("consumo_ab", ano, mes)) return resumoAB(ano, mes);
   if (ano === 2026) { const c = CHAVES_AB_2026[mes]; return c ? DADOS_AB[c] : null; }
