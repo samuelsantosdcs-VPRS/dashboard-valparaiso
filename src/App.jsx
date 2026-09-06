@@ -1097,6 +1097,53 @@ const FONTES_EXTERNAS = {
       operadores: ["operador"],
     },
   },
+  eventos: {
+    rotulo: "Eventos",
+    ativo: true,
+    meses: ["2026-8"],
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=2054099230&single=true&output=csv",
+    colunas: {
+      data: ["data_evento"],
+      valor: ["valor_pago"],
+      competencia: ["competencia"],
+    },
+    // Evento cancelado não conta na receita.
+    excluirColuna: "status",
+    excluirValores: ["CANCELADO"],
+    dimensoes: {
+      promotores: ["promotor"],
+      produtos: ["produto"],
+    },
+    // Colunas numéricas extras, para os totais de "devido" e "pessoas"
+    // do card mensal (o "valor" principal acima já cobre o pago).
+    metricas: {
+      devido: ["valor_devido"],
+      pessoas: ["qtd_pessoas"],
+    },
+  },
+  passaporte_corp: {
+    rotulo: "Convênios",
+    ativo: true,
+    meses: ["2026-8"],
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=1498760670&single=true&output=csv",
+    // O painel acompanha o valor PAGO por dia de pagamento, não o devido.
+    colunas: {
+      data: ["data_pagamento"],
+      valor: ["valor_pago"],
+      competencia: ["competencia"],
+    },
+    dimensoes: {
+      empresas: ["empresa"],
+      formas: ["forma_pagamento"],
+    },
+    metricas: {
+      devido: ["valor_devido"],
+    },
+    // Segunda série diária: devido por dia de VENCIMENTO (para o gráfico
+    // de devido x pago). Usa outra coluna de data, então é resolvida à parte.
+    dataSecundaria: ["vencimento"],
+    valorSecundario: ["valor_devido"],
+  },
   acesso: {
     rotulo: "Acesso",
     ativo: true,
@@ -1267,6 +1314,8 @@ async function carregarFonteExterna(produto) {
     const iMovimento = acha(f.colunas.movimento);
     const iExcl = f.excluirColuna ? acha([f.excluirColuna]) : -1;
     const iFine = f.fineColuna ? acha([f.fineColuna]) : -1;
+    const iData2 = f.dataSecundaria ? acha(f.dataSecundaria) : -1;
+    const iValor2 = f.valorSecundario ? acha(f.valorSecundario) : -1;
     const iDedup = f.dedup ? acha(f.dedup) : -1;
     const iDedupHora = f.dedupHora ? acha(f.dedupHora) : -1;
     const janelaDedup = f.dedupJanelaSegundos || 0;
@@ -1311,6 +1360,7 @@ async function carregarFonteExterna(produto) {
       const vistos = new Map();     // código → segundos da última leitura no dia
       let brutos = 0, descartados = 0;
       const porFine = new Map();    // dia → valor somado das linhas de Fini
+      const porDia2 = new Map();    // segunda série diária (ex.: devido por vencimento)
       const porDim = {};            // dimensão → Map(rótulo → [contagem, valorSomado])
       Object.keys(dims).forEach((n) => { porDim[n] = new Map(); });
       const porMetrica = {};        // métrica → array de valores numéricos
@@ -1387,6 +1437,13 @@ async function carregarFonteExterna(produto) {
           const v = paraNumero(l[idx]);
           if (Number.isFinite(v)) porMetrica[nome].push(v);
         });
+
+        if (iData2 >= 0 && iValor2 >= 0) {
+          const d2 = diaEMes(l[iData2]);
+          if (d2 && d2.ano === ano && d2.mes === mes) {
+            porDia2.set(d2.dia, (porDia2.get(d2.dia) || 0) + paraNumero(l[iValor2]));
+          }
+        }
 
         const atualDia = porDia.get(d.dia) || [0, 0, new Set()];
         atualDia[0] += valor;
@@ -1487,6 +1544,10 @@ async function carregarFonteExterna(produto) {
           .map(([r, [c, v]]) => [r, Math.round(v * 100) / 100, c])
           .sort((a, b) => b[1] - a[1]);
       });
+      if (porDia2.size > 0) {
+        ind.serie2 = [...porDia2.entries()].sort((a, b) => a[0] - b[0])
+          .map(([d, v]) => [d, Math.round(v * 100) / 100]);
+      }
       if (porFine.size > 0) {
         ind.fineDias = [...porFine.entries()].sort((a, b) => a[0] - b[0])
           .map(([d, v]) => [d, Math.round(v * 100) / 100]);
@@ -1637,6 +1698,52 @@ function resumoQuiosque(ano, mes) {
       : gravado?.produtos || [],
     categorias: gravado?.categorias || [],
   };
+}
+
+// Resumo mensal de Eventos, com a planilha por cima quando ligada.
+function resumoEventos(ano, mes) {
+  const gravado = DADOS_EVENTOS.mensal[`${ano}-${mes}`];
+  const externo = serieExterna("eventos", ano, mes);
+  if (!externo) return gravado;
+  const pago = Math.round(externo.reduce((a, r) => a + r[1], 0) * 100) / 100;
+  const linhasNoMes = externo.reduce((a, r) => a + (r[2] || 0), 0);
+  const ind = usaFonteExterna("eventos", ano, mes) ? EXTERNO.eventos.indicadores?.[`${ano}-${mes}`] || null : null;
+  const devido = ind?.devido?.length ? Math.round(ind.devido.reduce((a, b) => a + b, 0) * 100) / 100 : gravado?.devido || 0;
+  const pessoas = ind?.pessoas?.length ? Math.round(ind.pessoas.reduce((a, b) => a + b, 0)) : gravado?.pessoas || 0;
+  return { eventos: linhasNoMes, devido, pago, pessoas };
+}
+
+function diarioEventos(ano, mes) {
+  const externo = serieExterna("eventos", ano, mes);
+  if (externo) return externo.map((r) => [r[0], r[1], r[2]]);
+  return DADOS_EVENTOS.diario[`${ano}-${mes}`] || [];
+}
+
+// Resumo mensal de Convênios, com a planilha por cima quando ligada.
+function resumoConvenios(ano, mes) {
+  const gravado = DADOS_CORPORATIVO.mensal[`${ano}-${mes}`];
+  const externo = serieExterna("passaporte_corp", ano, mes);
+  if (!externo) return gravado;
+  const pago = Math.round(externo.reduce((a, r) => a + r[1], 0) * 100) / 100;
+  const registros = externo.reduce((a, r) => a + (r[2] || 0), 0);
+  const ind = usaFonteExterna("passaporte_corp", ano, mes) ? EXTERNO.passaporte_corp.indicadores?.[`${ano}-${mes}`] || null : null;
+  const devido = ind?.devido?.length ? Math.round(ind.devido.reduce((a, b) => a + b, 0) * 100) / 100 : gravado?.devido || 0;
+  const empresasPagantes = ind?.empresas?.length ? ind.empresas.filter((e) => e[1] > 0).length : gravado?.empresas_pagantes || 0;
+  return { registros, pago, devido, empresas_pagantes: empresasPagantes };
+}
+
+function diarioConveniosPago(ano, mes) {
+  const externo = serieExterna("passaporte_corp", ano, mes);
+  if (externo) return externo.map((r) => [r[0], r[1], r[2]]);
+  return DADOS_CORPORATIVO.diario[`${ano}-${mes}`] || [];
+}
+
+function diarioConveniosDevido(ano, mes) {
+  const ind = usaFonteExterna("passaporte_corp", ano, mes)
+    ? EXTERNO.passaporte_corp.indicadores?.[`${ano}-${mes}`]
+    : null;
+  if (ind?.serie2?.length) return ind.serie2;
+  return DADOS_CORPORATIVO.diario_devido?.[`${ano}-${mes}`] || null;
 }
 
 function indicadoresAcesso(ano, mes) {
@@ -4339,8 +4446,8 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
   const chave = `${ano}-${mes}`;
   const chaveAnt = `${ano - 1}-${mes}`;
-  const mensalAtual = DADOS_EVENTOS.mensal[chave];
-  const mensalAnt = DADOS_EVENTOS.mensal[chaveAnt];
+  const mensalAtual = resumoEventos(ano, mes);
+  const mensalAnt = resumoEventos(ano - 1, mes);
 
   if (!mensalAtual) {
     return (
@@ -4359,21 +4466,21 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   for (let m = 1; m <= 12; m++) {
     const linha = { mes: meses[m - 1].slice(0, 3) };
     [2023, 2024, 2025, 2026].forEach((a) => {
-      const d = DADOS_EVENTOS.mensal[`${a}-${m}`];
+      const d = resumoEventos(a, m);
       if (d) linha[String(a)] = d.pago;
     });
     // Meta 2026 = pago 2025 * 1.2
-    const d25 = DADOS_EVENTOS.mensal[`2025-${m}`];
+    const d25 = resumoEventos(2025, m);
     if (d25) linha["Meta 2026"] = d25.pago * 1.2;
     // Reservado 2026 (linha pontilhada mostra o "pipeline")
-    const d26 = DADOS_EVENTOS.mensal[`2026-${m}`];
+    const d26 = resumoEventos(2026, m);
     if (d26 && d26.devido !== d26.pago) linha["Reservado 2026"] = d26.devido;
     serieAnual.push(linha);
   }
 
   // Série diária do mês atual (se disponível)
-  const diario = DADOS_EVENTOS.diario[chave] || [];
-  const diarioAnt = DADOS_EVENTOS.diario[chaveAnt] || [];
+  const diario = diarioEventos(ano, mes);
+  const diarioAnt = diarioEventos(ano - 1, mes);
   const diasMes = new Date(ano, mes, 0).getDate();
   const dias = [];
   let accAtual = 0;
@@ -4688,8 +4795,8 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
       {/* EVOLUÇÃO DIÁRIA ACUMULADA - Eventos */}
       {metaMensal && metaMensal > 0 && (
         <EvolucaoAcumulada
-          diasAtual={(DADOS_EVENTOS.diario[`${ano}-${mes}`] || []).map(r => [r[0], r[1]])}
-          diasAnterior={(DADOS_EVENTOS.diario[`${ano-1}-${mes}`] || []).map(r => [r[0], r[1]])}
+          diasAtual={diarioEventos(ano, mes).map(r => [r[0], r[1]])}
+          diasAnterior={diarioEventos(ano - 1, mes).map(r => [r[0], r[1]])}
           meta={metaMensal}
           ano={ano}
           mes={mes}
@@ -5205,7 +5312,7 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
               {[2020, 2021, 2022, 2023, 2024, 2025, 2026].map((a) => {
                 let totalEv = 0, totalVl = 0, totalPg = 0, totalPe = 0;
                 for (let m = 1; m <= 12; m++) {
-                  const d = DADOS_EVENTOS.mensal[`${a}-${m}`];
+                  const d = resumoEventos(a, m);
                   if (d) {
                     totalEv += d.eventos;
                     totalVl += d.devido;
@@ -5216,7 +5323,7 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
                 if (totalEv === 0) return null;
                 let totalPgAnt = 0;
                 for (let m = 1; m <= 12; m++) {
-                  const d = DADOS_EVENTOS.mensal[`${a - 1}-${m}`];
+                  const d = resumoEventos(a - 1, m);
                   if (d) totalPgAnt += d.pago;
                 }
                 const delta = totalPgAnt > 0 ? ((totalPg - totalPgAnt) / totalPgAnt) * 100 : null;
@@ -7232,12 +7339,12 @@ function getReceitaMes(produtoId, ano, mes) {
       return { valor: d.total, unidades: 0, temDados: true };
     }
     case "eventos": {
-      const d = DADOS_EVENTOS.mensal[key];
+      const d = resumoEventos(ano, mes);
       if (!d || d.pago === 0) return null;
       return { valor: d.pago, unidades: d.pessoas, temDados: true };
     }
     case "passaporte_corp": {
-      const d = DADOS_CORPORATIVO.mensal[key];
+      const d = resumoConvenios(ano, mes);
       if (!d || d.pago === 0) return null;
       return { valor: d.pago, unidades: d.empresas_pagantes, temDados: true };
     }
@@ -8326,8 +8433,8 @@ function CorporativoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
   const chave = `${ano}-${mes}`;
   const chaveAnt = `${ano - 1}-${mes}`;
-  const dados = DADOS_CORPORATIVO.mensal[chave];
-  const dadosAnt = DADOS_CORPORATIVO.mensal[chaveAnt];
+  const dados = resumoConvenios(ano, mes);
+  const dadosAnt = resumoConvenios(ano - 1, mes);
 
   if (!dados) {
     return (
@@ -8347,12 +8454,12 @@ function CorporativoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   const diaInicioEfetivo = Math.max(1, Math.min(diaInicio, diaFimEfetivo));
   const ehPeriodoParcial = diaInicioEfetivo > 1 || diaFimEfetivo < diasMes;
 
-  const diarioDevidoMes = DADOS_CORPORATIVO.diario_devido?.[chave] || null;
+  const diarioDevidoMes = diarioConveniosDevido(ano, mes);
   // Se não temos quebra diária do devido pra esse mês, usamos o total do mês inteiro (sem recorte)
   const devidoPeriodo = diarioDevidoMes
     ? diarioDevidoMes.filter((r) => r[0] >= diaInicioEfetivo && r[0] <= diaFimEfetivo).reduce((a, r) => a + r[1], 0)
     : dados.devido;
-  const diarioPagoMes = DADOS_CORPORATIVO.diario[chave] || [];
+  const diarioPagoMes = diarioConveniosPago(ano, mes);
   // Recebido oficial = RESUMO DOS RECEBIMENTOS do relatório (dados.pago),
   // que inclui lançamentos sem data no diário (ex: cartão recorrente).
   // Só usamos a soma do diário quando o recorte realmente exclui lançamentos.
@@ -8384,16 +8491,16 @@ function CorporativoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   for (let m = 1; m <= 12; m++) {
     const linha = { mes: meses[m - 1].slice(0, 3) };
     [2025, 2026].forEach((a) => {
-      const d = DADOS_CORPORATIVO.mensal[`${a}-${m}`];
+      const d = resumoConvenios(a, m);
       if (d) linha[String(a)] = d.devido;
     });
-    const d25 = DADOS_CORPORATIVO.mensal[`2025-${m}`];
+    const d25 = resumoConvenios(2025, m);
     if (d25) linha["Meta 2026"] = d25.devido * 1.2;
     serieAnual.push(linha);
   }
 
-  const diario = DADOS_CORPORATIVO.diario[chave] || [];
-  const diarioAnt = DADOS_CORPORATIVO.diario[chaveAnt] || [];
+  const diario = diarioConveniosPago(ano, mes);
+  const diarioAnt = diarioConveniosPago(ano - 1, mes);
   const mapDia = new Map(diario.map((r) => [r[0], { valor: r[1], qtd: r[2] }]));
   const mapDiaAnt = new Map(diarioAnt.map((r) => [r[0], { valor: r[1], qtd: r[2] }]));
   const serieDiaria = [];
@@ -8524,8 +8631,8 @@ function CorporativoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
       {/* EVOLUÇÃO DIÁRIA ACUMULADA - Corporativo */}
       {metaMensal && metaMensal > 0 && (
         <EvolucaoAcumulada
-          diasAtual={(DADOS_CORPORATIVO.diario[`${ano}-${mes}`] || []).map(r => [r[0], r[1]])}
-          diasAnterior={(DADOS_CORPORATIVO.diario[`${ano-1}-${mes}`] || []).map(r => [r[0], r[1]])}
+          diasAtual={diarioConveniosPago(ano, mes).map(r => [r[0], r[1]])}
+          diasAnterior={diarioConveniosPago(ano - 1, mes).map(r => [r[0], r[1]])}
           meta={metaMensal}
           ano={ano}
           mes={mes}
@@ -8772,9 +8879,9 @@ function CorporativoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
             <tbody>
               {[2025, 2026].flatMap((a) =>
                 Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
-                  const d = DADOS_CORPORATIVO.mensal[`${a}-${m}`];
+                  const d = resumoConvenios(a, m);
                   if (!d) return null;
-                  const dAnt = DADOS_CORPORATIVO.mensal[`${a - 1}-${m}`];
+                  const dAnt = resumoConvenios(a - 1, m);
                   const meta = dAnt ? dAnt.devido * 1.2 : null;
                   const atingim = meta ? (d.devido / meta) * 100 : null;
                   const inad = d.devido - d.pago;
