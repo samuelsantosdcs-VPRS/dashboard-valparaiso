@@ -987,7 +987,7 @@ const FONTES_EXTERNAS = {
   assinaturas: {
     rotulo: "V+",
     ativo: true,
-    meses: ["2026-8"],
+    meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=941178592&single=true&output=csv",
     // nome da coluna → apelidos aceitos no cabeçalho, em minúsculo
     colunas: {
@@ -1001,7 +1001,7 @@ const FONTES_EXTERNAS = {
   bilheteria_online: {
     rotulo: "E-commerce",
     ativo: true,
-    meses: ["2026-8"],
+    meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=2100805819&single=true&output=csv",
     colunas: {
       data: ["data_venda", "data/hora", "data", "data_pagamento"],
@@ -1026,7 +1026,7 @@ const FONTES_EXTERNAS = {
   quiosque_ilha: {
     rotulo: "Quiosque Ilha",
     ativo: true,
-    meses: ["2026-8"],
+    meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=388532097&single=true&output=csv",
     // Mesmo formato de coluna do e-commerce (é o mesmo sistema de venda POS).
     colunas: {
@@ -1048,7 +1048,7 @@ const FONTES_EXTERNAS = {
   bilheteria_park: {
     rotulo: "B. Park",
     ativo: true,
-    meses: ["2026-8"],
+    meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=440761211&single=true&output=csv",
     colunas: {
       data: ["data_pagamento"],
@@ -1076,7 +1076,7 @@ const FONTES_EXTERNAS = {
   consumo_ab: {
     rotulo: "A&B",
     ativo: true,
-    meses: ["2026-8"],
+    meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=176043632&single=true&output=csv",
     colunas: {
       data: ["data"],
@@ -1100,7 +1100,7 @@ const FONTES_EXTERNAS = {
   eventos: {
     rotulo: "Eventos",
     ativo: true,
-    meses: ["2026-8"],
+    meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=2054099230&single=true&output=csv",
     colunas: {
       data: ["data_evento"],
@@ -1124,7 +1124,7 @@ const FONTES_EXTERNAS = {
   passaporte_corp: {
     rotulo: "Convênios",
     ativo: true,
-    meses: ["2026-8"],
+    meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=1498760670&single=true&output=csv",
     // O painel acompanha o valor PAGO por dia de pagamento, não o devido.
     colunas: {
@@ -1147,7 +1147,7 @@ const FONTES_EXTERNAS = {
   acesso: {
     rotulo: "Acesso",
     ativo: true,
-    meses: ["2026-8"],
+    meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=1256819127&single=true&output=csv",
     // Cada linha é uma leitura de catraca. "quantidade" vale 1, então somar
     // o valor equivale a contar acessos e a máquina genérica serve.
@@ -1360,6 +1360,7 @@ async function carregarFonteExterna(produto) {
       const vistos = new Map();     // código → segundos da última leitura no dia
       let brutos = 0, descartados = 0;
       const porFine = new Map();    // dia → valor somado das linhas de Fini
+      const porStatusTodos = new Map(); // coluna de exclusão → [valor, contagem], sem filtrar
       const porDia2 = new Map();    // segunda série diária (ex.: devido por vencimento)
       const porDim = {};            // dimensão → Map(rótulo → [contagem, valorSomado])
       Object.keys(dims).forEach((n) => { porDim[n] = new Map(); });
@@ -1401,6 +1402,16 @@ async function carregarFonteExterna(produto) {
         if (iComp >= 0 && !competenciaBate(l[iComp], ano, mes)) continue;
         const d = diaEMes(l[iData]);
         if (!d || d.ano !== ano || d.mes !== mes) continue;
+
+        // Mix completo da coluna de exclusão (ex.: status), incluindo as
+        // linhas que serão descartadas a seguir — só para exibir a
+        // composição real, nunca para somar na receita.
+        if (iExcl >= 0) {
+          const rotExcl = (l[iExcl] || "").trim() || "Sem status";
+          const cur = porStatusTodos.get(rotExcl) || [0, 0];
+          cur[0] += paraNumero(l[iValor]); cur[1] += 1;
+          porStatusTodos.set(rotExcl, cur);
+        }
 
         if (iFine >= 0 && (l[iFine] || "").trim() === f.fineValor) {
           porFine.set(d.dia, (porFine.get(d.dia) || 0) + paraNumero(l[iValor]));
@@ -1544,6 +1555,11 @@ async function carregarFonteExterna(produto) {
           .map(([r, [c, v]]) => [r, Math.round(v * 100) / 100, c])
           .sort((a, b) => b[1] - a[1]);
       });
+      if (porStatusTodos.size > 0) {
+        ind.statusTodos = [...porStatusTodos.entries()]
+          .map(([r, [v, c]]) => [r, Math.round(v * 100) / 100, c])
+          .sort((a, b) => b[2] - a[2]);
+      }
       if (porDia2.size > 0) {
         ind.serie2 = [...porDia2.entries()].sort((a, b) => a[0] - b[0])
           .map(([d, v]) => [d, Math.round(v * 100) / 100]);
@@ -1744,6 +1760,31 @@ function diarioConveniosDevido(ano, mes) {
     : null;
   if (ind?.serie2?.length) return ind.serie2;
   return DADOS_CORPORATIVO.diario_devido?.[`${ano}-${mes}`] || null;
+}
+
+// Ranking anual (Eventos: promotor/produto · Convênios: empresa/forma),
+// somando os meses de 2026 que já têm dado na planilha. Anos anteriores a
+// 2026 continuam vindo do código, porque a fonte não cobre esses anos.
+function rankingAnualExterno(produto, dimensao, ano) {
+  if (ano !== 2026 || !FONTES_EXTERNAS[produto]?.ativo) return null;
+  const somas = new Map(); // rótulo → [valor, contagem]
+  let algumMes = false;
+  for (let m = 1; m <= 12; m++) {
+    if (!usaFonteExterna(produto, ano, m)) continue;
+    const ind = EXTERNO[produto].indicadores?.[`${ano}-${m}`];
+    const lista = ind?.[dimensao];
+    if (!lista?.length) continue;
+    algumMes = true;
+    lista.forEach(([rot, valor, count]) => {
+      const cur = somas.get(rot) || [0, 0];
+      cur[0] += valor; cur[1] += count;
+      somas.set(rot, cur);
+    });
+  }
+  if (!algumMes) return null;
+  return [...somas.entries()]
+    .map(([rot, [v, c]]) => [rot, Math.round(v * 100) / 100, c])
+    .sort((a, b) => b[1] - a[1]);
 }
 
 function indicadoresAcesso(ano, mes) {
@@ -4500,10 +4541,10 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   }
 
   // Promotores e produtos do ano
-  const promotoresAno = DADOS_EVENTOS.promotores[String(ano)] || [];
-  const promotoresAnt = DADOS_EVENTOS.promotores[String(ano - 1)] || [];
-  const produtosAno = DADOS_EVENTOS.produtos[String(ano)] || [];
-  const produtosAnt = DADOS_EVENTOS.produtos[String(ano - 1)] || [];
+  const promotoresAno = rankingAnualExterno("eventos", "promotores", ano) || DADOS_EVENTOS.promotores[String(ano)] || [];
+  const promotoresAnt = rankingAnualExterno("eventos", "promotores", ano - 1) || DADOS_EVENTOS.promotores[String(ano - 1)] || [];
+  const produtosAno = rankingAnualExterno("eventos", "produtos", ano) || DADOS_EVENTOS.produtos[String(ano)] || [];
+  const produtosAnt = rankingAnualExterno("eventos", "produtos", ano - 1) || DADOS_EVENTOS.produtos[String(ano - 1)] || [];
   const fontesAno = DADOS_EVENTOS.fontes[String(ano)] || [];
 
   // Variações
@@ -4580,6 +4621,47 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           delta={deltaTkt}
         />
       </section>
+
+      {/* STATUS DOS EVENTOS — vindo da planilha (inclui os cancelados, que
+          não entram na receita mas mostram taxa de cancelamento real) */}
+      {(() => {
+        const status = usaFonteExterna("eventos", ano, mes)
+          ? EXTERNO.eventos.indicadores?.[`${ano}-${mes}`]?.statusTodos
+          : null;
+        if (!status?.length) return null;
+        const total = status.reduce((a, s) => a + s[2], 0);
+        const cancelados = status.find((s) => s[0] === "CANCELADO");
+        const taxaCancel = cancelados ? (cancelados[2] / total) * 100 : 0;
+        const cores = { REALIZADO: "#10b981", AGENDADO: "#06b6d4", CANCELADO: "#ef4444" };
+        return (
+          <section className="card rounded-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="display-font text-xl font-light">Status dos eventos no mês</h3>
+              <span className="text-xs text-stone-500">
+                {total} lançamentos · <span className={taxaCancel > 15 ? "text-red-400" : "text-stone-400"}>{taxaCancel.toFixed(1)}% cancelados</span>
+              </span>
+            </div>
+            <div className="flex h-6 rounded-lg overflow-hidden mb-3">
+              {status.map(([nome, , count]) => (
+                <div
+                  key={nome}
+                  className="flex items-center justify-center text-[10px] font-medium text-white/90"
+                  style={{ width: `${(count / total) * 100}%`, background: cores[nome] || "#78716c", minWidth: count > 0 ? 28 : 0 }}
+                >
+                  {(count / total) * 100 >= 8 ? count : ""}
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-1">
+              {status.map(([nome, valor, count]) => (
+                <span key={nome} className="text-xs text-stone-400">
+                  <span style={{ color: cores[nome] || "#78716c" }}>●</span> {nome} {count} · {formatBRL(valor)}
+                </span>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* META +20% YoY */}
       {metaMensal && metaMensal > 0 && (
@@ -8518,9 +8600,9 @@ function CorporativoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
     });
   }
 
-  const empresas = DADOS_CORPORATIVO.empresas[String(ano)] || [];
+  const empresas = rankingAnualExterno("passaporte_corp", "empresas", ano) || DADOS_CORPORATIVO.empresas[String(ano)] || [];
   const corretores = DADOS_CORPORATIVO.corretores[String(ano)] || [];
-  const tipos = DADOS_CORPORATIVO.tipos_pagamento[String(ano)] || [];
+  const tipos = rankingAnualExterno("passaporte_corp", "formas", ano) || DADOS_CORPORATIVO.tipos_pagamento[String(ano)] || [];
   const totalTipos = tipos.reduce((a, b) => a + b[1], 0);
 
   return (
@@ -8557,6 +8639,38 @@ function CorporativoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           neutral
         />
       </section>
+
+      {/* FORMAS DE PAGAMENTO — vindo da planilha (boleto, pix, cartão recorrente) */}
+      {(() => {
+        const formas = usaFonteExterna("passaporte_corp", ano, mes)
+          ? EXTERNO.passaporte_corp.indicadores?.[`${ano}-${mes}`]?.formas
+          : null;
+        if (!formas?.length) return null;
+        const total = formas.reduce((a, f) => a + f[1], 0);
+        const maior = Math.max(...formas.map((f) => f[1]), 1);
+        return (
+          <section className="card rounded-xl p-6 mb-6">
+            <h3 className="display-font text-xl font-light mb-1">Formas de pagamento</h3>
+            <p className="text-stone-500 text-xs mb-4">Participação no valor recebido no mês</p>
+            {formas.map(([nome, valor, count]) => (
+              <div key={nome} className="py-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <span className="text-sm text-stone-100">{nome}</span>
+                  <span className="mono-font text-sm text-stone-200">{formatBRL(valor)}</span>
+                </div>
+                <div className="flex justify-between items-center gap-3">
+                  <div className="flex-1 h-1.5 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <div className="h-full rounded" style={{ width: `${(valor / maior) * 100}%`, background: "#10b981" }} />
+                  </div>
+                  <span className="text-[11px] text-stone-500 shrink-0">
+                    {total > 0 ? ((valor / total) * 100).toFixed(1) : 0}% · {count} boletos
+                  </span>
+                </div>
+              </div>
+            ))}
+          </section>
+        );
+      })()}
 
       {/* META +20% */}
       {metaMensal && metaMensal > 0 && (
