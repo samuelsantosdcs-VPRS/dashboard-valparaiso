@@ -357,6 +357,583 @@ const OVERRIDES_DIRETORIA = {
       eventos: 134189.05,
     },
   },
+  "2019-3": {
+    produtos: {
+      acesso: 14759.0,
+      bilheteria_park: 96899.14,
+      bilheteria_online: 20245.2,
+      assinaturas: 102820.87,
+      passaporte_corp: 62775.81,
+      consumo: 272089.37,
+      eventos: 26693.48,
+    },
+    total: 596282.87,
+  },
+  "2021-1": {
+    produtos: {
+      acesso: 32152.0,
+      bilheteria_park: 414690.71,
+      bilheteria_online: 59035.5,
+      assinaturas: 388163.75,
+      passaporte_corp: 63478.67,
+      consumo: 766568.74,
+      eventos: 52684.16,
+    },
+    total: 1776773.53,
+  },
+  "2021-2": {
+    produtos: {
+      acesso: 11613.0,
+      bilheteria_park: 116526.29,
+      bilheteria_online: 15694.0,
+      assinaturas: 225811.56,
+      passaporte_corp: 62491.28,
+      consumo: 271704.64,
+      eventos: 28824.64,
+    },
+    total: 732665.41,
+  },
+  "2021-5": {
+    produtos: {
+      acesso: 19033.0,
+      bilheteria_park: 143765.49,
+      bilheteria_online: 11488.5,
+      assinaturas: 202624.26,
+      passaporte_corp: 51290.92,
+      consumo: 440417.41,
+      eventos: 12581.06,
+    },
+    total: 881200.64,
+  },
+  "2021-6": {
+    produtos: {
+      acesso: 20345.0,
+      bilheteria_park: 172034.49,
+      bilheteria_online: 28942.15,
+      assinaturas: 273316.68,
+      passaporte_corp: 44470.76,
+      consumo: 486728.04,
+      eventos: 36811.99,
+    },
+    total: 1062649.11,
+  },
+  "2021-7": {
+    produtos: {
+      acesso: 48727.0,
+      bilheteria_park: 610973.91,
+      bilheteria_online: 113698.5,
+      quiosque_rio_anil: 92400.0,
+      quiosque_ilha: 92400.0,
+      assinaturas: 567346.34,
+      passaporte_corp: 67166.17,
+      consumo: 1350350.96,
+      eventos: 95535.28,
+    },
+    total: 3038598.16,
+  },
+  "2021-8": {
+    produtos: {
+      acesso: 27735.0,
+      bilheteria_park: 252554.0,
+      bilheteria_online: 41412.5,
+      quiosque_rio_anil: 77840.0,
+      quiosque_ilha: 77840.0,
+      assinaturas: 258575.07,
+      passaporte_corp: 46309.52,
+      consumo: 740535.39,
+      eventos: 63481.0,
+    },
+    total: 1586282.48,
+  },
+  "2021-9": {
+    produtos: {
+      acesso: 29963.0,
+      bilheteria_park: 281314.73,
+      bilheteria_online: 20661.25,
+      quiosque_ilha: 70280.0,
+      assinaturas: 375618.35,
+      passaporte_corp: 56808.12,
+      consumo: 774374.58,
+      eventos: 70640.5,
+    },
+    total: 1679660.53,
+  },
+  "2021-10": {
+    produtos: {
+      acesso: 36189.0,
+      bilheteria_park: 322404.47,
+      bilheteria_online: 68570.0,
+      quiosque_rio_anil: 33570.0,
+      quiosque_ilha: 33570.0,
+      assinaturas: 379034.91,
+      passaporte_corp: 69968.38,
+      consumo: 947896.87,
+      eventos: 160595.5,
+    },
+    total: 2051799.13,
+  },
+  "2021-11": {
+    produtos: {
+      acesso: 26188.0,
+      bilheteria_park: 209310.95,
+      bilheteria_online: 32579.5,
+      quiosque_ilha: 22400.0,
+      assinaturas: 356209.51,
+      passaporte_corp: 62311.65,
+      consumo: 596000.03,
+      eventos: 101212.0,
+    },
+    total: 1406211.64,
+  },
+  "2021-12": {
+    produtos: {
+      acesso: 25773.0,
+      bilheteria_park: 259333.5,
+      bilheteria_online: 41511.75,
+      quiosque_rio_anil: 19480.0,
+      quiosque_ilha: 19480.0,
+      assinaturas: 317005.02,
+      passaporte_corp: 63282.6,
+      consumo: 717105.58,
+      eventos: 140262.0,
+    },
+    total: 1603233.45,
+  },
+  "2022-1": {
+    produtos: {
+      acesso: 25181.0,
+      bilheteria_park: 272513.99,
+      bilheteria_online: 104603.25,
+      quiosque_rio_anil: 17352.5,
+      quiosque_ilha: 27917.5,
+      assinaturas: 192254.24,
+      passaporte_corp: 69961.34,
+      consumo: 740809.4,
+      eventos: 63945.0,
+    },
+    total: 1514538.22,
+  },
+  "2022-2": {
+    produtos: {
+      acesso: 21519.0,
+      bilheteria_park: 158427.2,
+      bilheteria_online: 36299.62,
+      quiosque_ilha: 12005.0,
+      assinaturas: 113517.67,
+      passaporte_corp: 62675.24,
+      consumo: 563799.09,
+      eventos: 35802.9,
+    },
+    total: 1004045.72,
+  },
+  "2022-3": {
+    produtos: {
+      acesso: 16718.0,
+      bilheteria_park: 163193.07,
+      bilheteria_online: 16114.24,
+      quiosque_rio_anil: 4890.0,
+      quiosque_ilha: 6745.0,
+      assinaturas: 251401.72,
+      passaporte_corp: 62846.73,
+      consumo: 458336.66,
+      eventos: 42920.83,
+    },
+    total: 1023166.25,
+  },
+  "2022-5": {
+    produtos: {
+      acesso: 17150.0,
+      bilheteria_park: 121903.14,
+      bilheteria_online: 28971.0,
+      quiosque_rio_anil: 9345.0,
+      quiosque_ilha: 8850.0,
+      assinaturas: 157572.31,
+      passaporte_corp: 73457.77,
+      consumo: 496316.05,
+      eventos: 63950.0,
+    },
+    total: 977515.27,
+  },
+  "2022-6": {
+    produtos: {
+      acesso: 23376.0,
+      bilheteria_park: 190704.79,
+      bilheteria_online: 43991.45,
+      quiosque_rio_anil: 11340.0,
+      quiosque_ilha: 15440.0,
+      assinaturas: 482538.66,
+      passaporte_corp: 65478.47,
+      consumo: 601676.85,
+      eventos: 51405.93,
+    },
+    total: 1485952.15,
+  },
+  "2022-7": {
+    produtos: {
+      acesso: 63634.0,
+      bilheteria_park: 829282.08,
+      bilheteria_online: 233532.76,
+      quiosque_rio_anil: 50790.01,
+      quiosque_ilha: 72660.0,
+      assinaturas: 936770.81,
+      passaporte_corp: 68598.05,
+      consumo: 2037140.72,
+      eventos: 142318.0,
+    },
+    total: 4434726.43,
+  },
+  "2022-8": {
+    produtos: {
+      acesso: 24431.0,
+      bilheteria_park: 188715.38,
+      bilheteria_online: 53128.5,
+      quiosque_rio_anil: 10275.0,
+      quiosque_ilha: 13335.0,
+      assinaturas: 430735.44,
+      passaporte_corp: 72015.71,
+      consumo: 724234.83,
+      eventos: 76086.7,
+    },
+    total: 1592957.56,
+  },
+  "2022-9": {
+    produtos: {
+      acesso: 27563.0,
+      bilheteria_park: 238328.61,
+      bilheteria_online: 73054.5,
+      quiosque_rio_anil: 9040.0,
+      quiosque_ilha: 9920.0,
+      assinaturas: 500500.53,
+      passaporte_corp: 70972.83,
+      consumo: 777031.18,
+      eventos: 60206.95,
+    },
+    total: 1766617.6,
+  },
+  "2022-10": {
+    produtos: {
+      acesso: 35108.0,
+      bilheteria_park: 265369.51,
+      bilheteria_online: 77236.36,
+      quiosque_rio_anil: 13185.0,
+      quiosque_ilha: 16875.0,
+      assinaturas: 447866.95,
+      passaporte_corp: 72481.56,
+      consumo: 990769.2,
+      eventos: 208022.92,
+    },
+    total: 2126914.5,
+  },
+  "2022-11": {
+    produtos: {
+      acesso: 22465.0,
+      bilheteria_park: 166703.74,
+      bilheteria_online: 83760.0,
+      quiosque_ilha: 6654.0,
+      assinaturas: 532913.35,
+      passaporte_corp: 72188.37,
+      consumo: 645316.91,
+      eventos: 97056.62,
+    },
+    total: 1627057.99,
+  },
+  "2022-12": {
+    produtos: {
+      acesso: 32834.0,
+      bilheteria_park: 368153.65,
+      bilheteria_online: 113528.75,
+      quiosque_rio_anil: 13280.0,
+      quiosque_ilha: 17640.0,
+      assinaturas: 452521.19,
+      passaporte_corp: 65320.72,
+      consumo: 1046437.37,
+      eventos: 163852.37,
+    },
+    total: 2273568.05,
+  },
+  "2023-1": {
+    produtos: {
+      acesso: 54907.0,
+      bilheteria_park: 691667.0,
+      bilheteria_online: 172136.5,
+      quiosque_rio_anil: 25040.0,
+      quiosque_ilha: 40720.0,
+      assinaturas: 454051.59,
+      passaporte_corp: 62118.09,
+      consumo: 1772806.01,
+      eventos: 214318.26,
+    },
+    total: 3487764.45,
+  },
+  "2023-2": {
+    produtos: {
+      acesso: 18426.0,
+      bilheteria_park: 171157.49,
+      bilheteria_online: 43109.0,
+      quiosque_ilha: 12680.0,
+      assinaturas: 271309.09,
+      passaporte_corp: 68153.02,
+      consumo: 532227.07,
+      eventos: 113901.48,
+    },
+    total: 1230963.15,
+  },
+  "2023-3": {
+    produtos: {
+      acesso: 14397.0,
+      bilheteria_park: 101309.54,
+      bilheteria_online: 22898.0,
+      quiosque_ilha: 8750.0,
+      assinaturas: 484471.49,
+      passaporte_corp: 65100.0,
+      consumo: 395516.07,
+      eventos: 50861.94,
+    },
+    total: 1143304.04,
+  },
+  "2023-5": {
+    produtos: {
+      acesso: 18674.0,
+      bilheteria_park: 123490.0,
+      bilheteria_online: 48072.0,
+      quiosque_ilha: 13410.0,
+      assinaturas: 322799.56,
+      passaporte_corp: 61831.36,
+      consumo: 551646.52,
+      eventos: 52444.44,
+    },
+    total: 1192367.88,
+  },
+  "2023-6": {
+    produtos: {
+      acesso: 21071.0,
+      bilheteria_park: 142271.0,
+      bilheteria_online: 68578.21,
+      quiosque_ilha: 14850.0,
+      assinaturas: 470604.34,
+      passaporte_corp: 62292.0,
+      consumo: 636847.99,
+      eventos: 94849.82,
+    },
+    total: 1511364.36,
+  },
+  "2023-7": {
+    produtos: {
+      acesso: 80395.0,
+      bilheteria_park: 902787.44,
+      bilheteria_online: 380314.77,
+      quiosque_ilha: 133380.0,
+      assinaturas: 1107167.38,
+      passaporte_corp: 63995.36,
+      consumo: 2814280.8,
+      eventos: 219473.17,
+    },
+    total: 5701793.92,
+  },
+  "2023-8": {
+    produtos: {
+      acesso: 25370.0,
+      bilheteria_park: 207812.74,
+      bilheteria_online: 80535.0,
+      quiosque_ilha: 23155.0,
+      assinaturas: 461894.49,
+      passaporte_corp: 68779.74,
+      consumo: 795277.95,
+      eventos: 128085.77,
+    },
+    total: 1790910.69,
+  },
+  "2023-9": {
+    produtos: {
+      acesso: 26919.0,
+      bilheteria_park: 179177.51,
+      bilheteria_online: 110856.25,
+      quiosque_ilha: 14270.0,
+      assinaturas: 465577.95,
+      passaporte_corp: 74033.17,
+      consumo: 864189.84,
+      eventos: 59287.0,
+    },
+    total: 1794310.72,
+  },
+  "2023-10": {
+    produtos: {
+      acesso: 37118.0,
+      bilheteria_park: 218068.25,
+      bilheteria_online: 120902.52,
+      quiosque_ilha: 19570.0,
+      assinaturas: 301061.08,
+      passaporte_corp: 78812.33,
+      consumo: 1120777.57,
+      eventos: 373670.3,
+    },
+    total: 2269980.05,
+  },
+  "2023-11": {
+    produtos: {
+      acesso: 43955.0,
+      bilheteria_park: 149017.5,
+      bilheteria_online: 76015.5,
+      quiosque_ilha: 16398.0,
+      assinaturas: 610911.23,
+      passaporte_corp: 81353.33,
+      consumo: 890941.99,
+      eventos: 527267.8,
+    },
+    total: 2395860.35,
+  },
+  "2023-12": {
+    produtos: {
+      acesso: 34995.0,
+      bilheteria_park: 327940.75,
+      bilheteria_online: 92905.26,
+      quiosque_ilha: 11050.77,
+      assinaturas: 341785.13,
+      passaporte_corp: 75942.48,
+      consumo: 1241727.67,
+      eventos: 354320.03,
+    },
+    total: 2480667.09,
+  },
+  "2024-1": {
+    produtos: {
+      acesso: 49733.0,
+      bilheteria_park: 651368.37,
+      bilheteria_online: 158877.73,
+      quiosque_ilha: 52207.3,
+      assinaturas: 307372.02,
+      passaporte_corp: 82623.32,
+      consumo: 1769539.73,
+      eventos: 203614.36,
+    },
+    total: 3275335.83,
+  },
+  "2024-2": {
+    produtos: {
+      acesso: 18709.0,
+      bilheteria_park: 174259.0,
+      bilheteria_online: 46783.97,
+      assinaturas: 211841.15,
+      passaporte_corp: 79174.39,
+      consumo: 610689.25,
+      eventos: 63964.76,
+    },
+    total: 1205421.52,
+  },
+  "2024-3": {
+    produtos: {
+      acesso: 14435.0,
+      bilheteria_park: 134942.5,
+      bilheteria_online: 41119.61,
+      assinaturas: 211422.88,
+      passaporte_corp: 80812.42,
+      consumo: 479722.21,
+      eventos: 89510.28,
+    },
+    total: 1051964.9,
+  },
+  "2024-5": {
+    produtos: {
+      acesso: 25197.0,
+      bilheteria_park: 163373.49,
+      bilheteria_online: 109353.54,
+      assinaturas: 225971.86,
+      passaporte_corp: 80989.32,
+      consumo: 849421.13,
+      eventos: 78867.21,
+    },
+    total: 1533173.55,
+  },
+  "2024-6": {
+    produtos: {
+      acesso: 23704.0,
+      bilheteria_park: 182561.05,
+      bilheteria_online: 119133.8,
+      assinaturas: 295294.45,
+      passaporte_corp: 80289.48,
+      consumo: 855706.61,
+      eventos: 145387.15,
+    },
+    total: 1702076.54,
+  },
+  "2024-7": {
+    produtos: {
+      acesso: 84717.0,
+      bilheteria_park: 719055.8,
+      bilheteria_online: 488107.9,
+      quiosque_ilha: 242789.18,
+      assinaturas: 1225676.04,
+      passaporte_corp: 87614.25,
+      consumo: 3247495.04,
+      eventos: 280583.5,
+    },
+    total: 6376038.71,
+  },
+  "2024-8": {
+    produtos: {
+      acesso: 30859.0,
+      bilheteria_park: 216809.97,
+      bilheteria_online: 106999.8,
+      quiosque_ilha: 42205.27,
+      assinaturas: 338223.54,
+      passaporte_corp: 83947.33,
+      consumo: 1038479.92,
+      eventos: 112578.12,
+    },
+    total: 1970102.95,
+  },
+  "2024-9": {
+    produtos: {
+      acesso: 25463.0,
+      bilheteria_park: 144051.1,
+      bilheteria_online: 64752.9,
+      quiosque_ilha: 21900.0,
+      assinaturas: 281574.92,
+      passaporte_corp: 88976.58,
+      consumo: 824281.91,
+      eventos: 123024.77,
+    },
+    total: 1574025.18,
+  },
+  "2024-10": {
+    produtos: {
+      acesso: 35334.0,
+      bilheteria_park: 190251.78,
+      bilheteria_online: 109357.5,
+      quiosque_ilha: 40155.0,
+      assinaturas: 294435.13,
+      passaporte_corp: 91207.6,
+      consumo: 1122679.51,
+      eventos: 394592.95,
+    },
+    total: 2278013.47,
+  },
+  "2024-11": {
+    produtos: {
+      acesso: 31836.0,
+      bilheteria_park: 158827.44,
+      bilheteria_online: 123589.32,
+      quiosque_ilha: 46455.0,
+      assinaturas: 548701.68,
+      passaporte_corp: 93013.11,
+      consumo: 1078000.81,
+      eventos: 199740.92,
+    },
+    total: 2280164.28,
+  },
+  "2024-12": {
+    produtos: {
+      acesso: 42442.0,
+      bilheteria_park: 282979.39,
+      bilheteria_online: 235703.85,
+      quiosque_ilha: 97260.0,
+      assinaturas: 388409.7,
+      passaporte_corp: 81477.68,
+      consumo: 1559078.59,
+      eventos: 565357.2,
+    },
+    total: 3252708.41,
+  },
 };
 
 // ============================================================
@@ -469,13 +1046,116 @@ function getDiasParqueAberto(ano, mes) {
 // Quando a planilha do V+ está ligada para o mês, o valor dela manda: ela é
 // a fonte, e o número gravado aqui vira apenas reserva para quando a
 // planilha estiver fora do ar.
+// ============================================================
+// HISTÓRICO MENSAL FECHADO — planilha em formato de relatório
+// ------------------------------------------------------------
+// Diferente das outras fontes (uma linha por venda/lançamento), essa
+// planilha é um relatório humano: blocos por mês, linhas de ano
+// misturadas com linhas de META e de "déficit", texto solto de
+// observação, e alguns erros de fórmula (#VALUE!, #DIV/0!).
+// Só cobre anos fechados (2019–2025); 2026 continua vindo das oito
+// fontes ao vivo, que já são mais precisas para o ano corrente.
+// ============================================================
+const HISTORICO_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=1886438494&single=true&output=csv";
+const HISTORICO_ATIVO = true;
+
+const MESES_NOME_HIST = {
+  JANEIRO: 1, FEVEREIRO: 2, "MARÇO": 3, ABRIL: 4, MAIO: 5, JUNHO: 6,
+  JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
+};
+const COLS_HIST = [
+  "acesso", "bilheteria_park", "bilheteria_online", "quiosque_rio_anil",
+  "quiosque_ilha", "assinaturas", "passaporte_corp", "consumo", "eventos",
+];
+
+const HISTORICO_EXTERNO = { produtos: null, atualizadoEm: null, erro: null, carregando: false, linhas: 0 };
+
+// Número do relatório: aceita "R$ 1.234,56", "-", célula vazia, erro de
+// fórmula (#VALUE!/#DIV/0!), texto solto ("batida") e o caso observado de
+// vírgula decimal duplicada ("504,302,3" → 504302,3).
+function numeroHistorico(bruto) {
+  let t = String(bruto ?? "").trim();
+  if (t === "" || t === "-" || /^-+$/.test(t)) return null;
+  if (/^#(VALUE|DIV\/0)!$/i.test(t)) return null;
+  if (/[a-zA-Z]/.test(t.replace("R$", ""))) return null; // "batida" e afins
+  t = t.replace(/R\$/g, "").replace(/\s/g, "");
+  if (t === "" || t === "-") return null;
+  const partes = t.split(",");
+  if (partes.length > 2) t = partes.slice(0, -1).join("") + "," + partes[partes.length - 1];
+  t = t.replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function carregarHistoricoExterno() {
+  if (!HISTORICO_ATIVO || HISTORICO_EXTERNO.carregando) return false;
+  HISTORICO_EXTERNO.carregando = true;
+  try {
+    const resp = await fetch(`${HISTORICO_URL}&_=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const linhas = parseCSV(await resp.text());
+
+    const produtos = {};
+    let mesAtual = null;
+    let usadas = 0;
+
+    for (const l of linhas) {
+      const c0 = (l[1] || "").trim();
+      if (MESES_NOME_HIST[c0.toUpperCase()]) { mesAtual = MESES_NOME_HIST[c0.toUpperCase()]; continue; }
+      if (!mesAtual || l.length < 11) continue;
+
+      // Só processa linha cujo rótulo comece com um ano de 4 dígitos —
+      // isso já exclui sozinho as linhas de META, "déficit" e observação.
+      const m = /^(\d{4})/.exec(c0);
+      if (!m) continue;
+      const ano = parseInt(m[1], 10);
+      if (ano < 2019 || ano > 2025) continue; // 2026+ vem das fontes ao vivo
+
+      const prods = {};
+      COLS_HIST.forEach((nome, idx) => {
+        const v = numeroHistorico(l[2 + idx]);
+        if (v !== null) prods[nome] = Math.round(v * 100) / 100;
+      });
+      if (Object.keys(prods).length === 0) continue;
+
+      const chave = `${ano}-${mesAtual}`;
+      produtos[chave] = prods; // uma reocorrência da mesma chave substitui a anterior
+      usadas += 1;
+    }
+
+    if (usadas === 0) throw new Error("nenhum mês reconhecido no relatório");
+    HISTORICO_EXTERNO.produtos = produtos;
+    HISTORICO_EXTERNO.linhas = usadas;
+    HISTORICO_EXTERNO.atualizadoEm = new Date();
+    HISTORICO_EXTERNO.erro = null;
+    return true;
+  } catch (e) {
+    HISTORICO_EXTERNO.erro = e.message || "falha ao ler o histórico";
+    return false;
+  } finally {
+    HISTORICO_EXTERNO.carregando = false;
+  }
+}
+
+// Produtos do mês vindos do histórico, só para anos fechados (< 2026).
+function produtosHistorico(anoMes) {
+  if (!HISTORICO_ATIVO || !HISTORICO_EXTERNO.produtos) return null;
+  const ano = parseInt(anoMes.split("-")[0], 10);
+  if (ano >= 2026) return null;
+  return HISTORICO_EXTERNO.produtos[anoMes] || null;
+}
+
 function produtosDoMes(anoMes) {
   const ov = OVERRIDES_DIRETORIA[anoMes];
-  if (!ov || !ov.produtos) return null;
   const partes = anoMes.split("-");
   const ano = parseInt(partes[0], 10);
   const mes = parseInt(partes[1], 10);
-  let produtos = ov.produtos;
+  const hist = produtosHistorico(anoMes);
+  if (!ov && !hist) return null;
+  let produtos = { ...(ov?.produtos || {}), ...(hist || {}) };
   Object.keys(FONTES_EXTERNAS).forEach((pid) => {
     if (pid === "consumo_ab") return; // tratado à parte, precisa somar o Fini
     const t = totalExterno(pid, ano, mes);
@@ -1646,8 +2326,11 @@ async function carregarFonteExterna(produto) {
 }
 
 const carregarTodasFontes = () =>
-  Promise.all(Object.keys(FONTES_EXTERNAS).filter((p) => FONTES_EXTERNAS[p].ativo && FONTES_EXTERNAS[p].url)
-    .map((p) => carregarFonteExterna(p)));
+  Promise.all([
+    ...Object.keys(FONTES_EXTERNAS).filter((p) => FONTES_EXTERNAS[p].ativo && FONTES_EXTERNAS[p].url)
+      .map((p) => carregarFonteExterna(p)),
+    carregarHistoricoExterno(),
+  ]);
 
 // Série diária externa no formato do produto pedido.
 const serieExterna = (produto, ano, mes) =>
@@ -2063,6 +2746,24 @@ export default function App() {
     setVersaoDados((v) => v + 1);
     setRecarregando(false);
   };
+
+  // Aviso do histórico mensal fechado, só quando o mês selecionado for
+  // um ano anterior a 2026 (é o único período que essa fonte cobre).
+  const avisoHistorico = (() => {
+    if (!HISTORICO_ATIVO || ano >= 2026) return null;
+    if (HISTORICO_EXTERNO.erro) {
+      return { pid: "historico", cor: "#f59e0b", texto: `Histórico mensal indisponível (${HISTORICO_EXTERNO.erro}). Exibindo os últimos valores gravados no painel.` };
+    }
+    if (!HISTORICO_EXTERNO.atualizadoEm) {
+      return { pid: "historico", cor: "#78716c", texto: "Lendo o histórico mensal..." };
+    }
+    const hora = HISTORICO_EXTERNO.atualizadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const temEsteMes = !!produtosHistorico(`${ano}-${mes}`);
+    return {
+      pid: "historico", cor: "#10b981",
+      texto: `Histórico mensal lido às ${hora} · ${HISTORICO_EXTERNO.linhas} meses no relatório${temEsteMes ? " · este mês veio da planilha" : " · este mês segue com o valor gravado no painel"}`,
+    };
+  })();
 
   // Uma linha de status por produto com planilha ligada no mês selecionado.
   const avisosFonte = Object.keys(FONTES_EXTERNAS)
@@ -2496,7 +3197,7 @@ export default function App() {
       </header>
 
       {/* Estado das fontes externas */}
-      {avisosFonte.map((avisoFonte, idxAviso) => (
+      {[...avisosFonte, ...(avisoHistorico ? [avisoHistorico] : [])].map((avisoFonte, idxAviso) => (
         <div
           key={`${avisoFonte.pid}-${versaoDados}`}
           className="mb-2 px-4 py-2 rounded-lg flex items-center gap-2"
