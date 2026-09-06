@@ -1356,6 +1356,8 @@ async function carregarFonteExterna(produto) {
       const porBilhete = new Map(); // nome → [valor, ingressos, Set(pedidos)]
       const porPagto = new Map();   // forma → [valor, ingressos, Set(pedidos)]
       const antec = [];             // antecedência em dias, um item por ingresso
+      const porAntecDia = new Map();  // dia de venda → Map(delta → [valor, qtd])
+      const porAntecGeral = new Map(); // dia de VISITA (venda+delta) → [valor, qtd]
       let parcelasSoma = 0, parcelasN = 0, cortesias = 0;
       const vistos = new Map();     // código → segundos da última leitura no dia
       let brutos = 0, descartados = 0;
@@ -1492,7 +1494,25 @@ async function carregarFonteExterna(produto) {
         }
         if (iAntec >= 0) {
           const dias = paraNumero(l[iAntec]);
-          if (Number.isFinite(dias) && dias >= 0) antec.push(dias);
+          if (Number.isFinite(dias) && dias >= 0) {
+            antec.push(dias);
+            // Distribuição por dia de venda × antecedência (delta), e o
+            // "_geral": mesma soma, agrupada pelo dia em que a visita cai
+            // (venda + delta), para o calendário de destino das visitas.
+            const delta = Math.round(dias);
+            const porDelta = porAntecDia.get(d.dia) || new Map();
+            const cur = porDelta.get(delta) || [0, 0];
+            cur[0] += valor; cur[1] += 1;
+            porDelta.set(delta, cur);
+            porAntecDia.set(d.dia, porDelta);
+
+            const diaVisita = d.dia + delta;
+            if (diaVisita >= 1 && diaVisita <= diasNoMes(ano, mes)) {
+              const g = porAntecGeral.get(diaVisita) || [0, 0];
+              g[0] += valor; g[1] += 1;
+              porAntecGeral.set(diaVisita, g);
+            }
+          }
         }
         if (iParcelas >= 0) {
           const p = paraNumero(l[iParcelas]);
@@ -1559,6 +1579,17 @@ async function carregarFonteExterna(produto) {
         ind.statusTodos = [...porStatusTodos.entries()]
           .map(([r, [v, c]]) => [r, Math.round(v * 100) / 100, c])
           .sort((a, b) => b[2] - a[2]);
+      }
+      if (porAntecDia.size > 0 || porAntecGeral.size > 0) {
+        ind.antecedenciaCalendario = {};
+        porAntecDia.forEach((mapa, dia) => {
+          ind.antecedenciaCalendario[String(dia)] = [...mapa.entries()]
+            .map(([delta, [v, q]]) => [delta, Math.round(v * 100) / 100, q])
+            .sort((a, b) => a[0] - b[0]);
+        });
+        ind.antecedenciaCalendario._geral = Object.fromEntries(
+          [...porAntecGeral.entries()].map(([dia, [v, q]]) => [String(dia), [Math.round(v * 100) / 100, q]])
+        );
       }
       if (porDia2.size > 0) {
         ind.serie2 = [...porDia2.entries()].sort((a, b) => a[0] - b[0])
@@ -1785,6 +1816,16 @@ function rankingAnualExterno(produto, dimensao, ano) {
   return [...somas.entries()]
     .map(([rot, [v, c]]) => [rot, Math.round(v * 100) / 100, c])
     .sort((a, b) => b[1] - a[1]);
+}
+
+// Calendário de destino das visitas (dia de venda × antecedência), com a
+// planilha por cima quando ligada. Mesmo formato de DADOS_ANTECEDENCIA_COMPRA.
+function calendarioAntecedencia(ano, mes) {
+  const ind = usaFonteExterna("bilheteria_online", ano, mes)
+    ? EXTERNO.bilheteria_online.indicadores?.[`${ano}-${mes}`]
+    : null;
+  if (ind?.antecedenciaCalendario) return ind.antecedenciaCalendario;
+  return DADOS_ANTECEDENCIA_COMPRA?.[`${ano}-${mes}`] || null;
 }
 
 function indicadoresAcesso(ano, mes) {
@@ -5748,7 +5789,7 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
               {Array.from({ length: primeiroDiaDaSemana }).map((_, i) => <div key={`ev-${i}`} />)}
               {Array.from({ length: diasMes }, (_, i) => i + 1).map((d) => {
                 const dadoVenda = mapVenda.get(d);
-                const temAntec = !!DADOS_ANTECEDENCIA_COMPRA?.[chave]?.[String(d)];
+                const temAntec = !!calendarioAntecedencia(ano, mes)?.[String(d)];
                 const selecionado = diaAntecedenciaSelecionado === d;
                 const intensidade = dadoVenda ? Math.min(1, dadoVenda.ingressos / maxVenda) : 0;
                 const bg = selecionado
@@ -5816,9 +5857,9 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
                 // Montar mapa de visitas baseado no dia selecionado (antecedência) OU no geral (calendario_visita)
                 let mapDestino = new Map();
                 let modoAntec = false;
-                if (diaAntecedenciaSelecionado && DADOS_ANTECEDENCIA_COMPRA?.[chave]?.[String(diaAntecedenciaSelecionado)]) {
+                if (diaAntecedenciaSelecionado && calendarioAntecedencia(ano, mes)?.[String(diaAntecedenciaSelecionado)]) {
                   modoAntec = true;
-                  const distrib = DADOS_ANTECEDENCIA_COMPRA[chave][String(diaAntecedenciaSelecionado)];
+                  const distrib = calendarioAntecedencia(ano, mes)[String(diaAntecedenciaSelecionado)];
                   distrib.forEach(([delta, valor, qtd]) => {
                     if (delta !== null) {
                       const dVisita = diaAntecedenciaSelecionado + delta;
@@ -5831,7 +5872,7 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
                 } else {
                   // Modo padrão: distribuição REAL de destino de todos os dias de venda
                   modoAntec = true;
-                  const geral = DADOS_ANTECEDENCIA_COMPRA?.[chave]?.["_geral"] || {};
+                  const geral = calendarioAntecedencia(ano, mes)?.["_geral"] || {};
                   Object.entries(geral).forEach(([dStr, [valor, qtd]]) => {
                     mapDestino.set(Number(dStr), { valor, qtd });
                   });
