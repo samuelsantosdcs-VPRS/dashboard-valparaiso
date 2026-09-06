@@ -1881,7 +1881,10 @@ const diasOperacaoPeriodo = (serie, inicio, fim) =>
 
 // Verifica se há dados reais para ano-mês
 const temDados = (ano, mes) => {
-  const dados = DADOS_ASSINATURAS[`${ano}-${mes}`];
+  // Precisa olhar a planilha também: sem isso, um mês só com dado ao vivo
+  // (sem entrada gravada no código) aparecia como "sem dados".
+  const externo = serieExterna("assinaturas", ano, mes);
+  const dados = externo || DADOS_ASSINATURAS[`${ano}-${mes}`];
   if (!dados) return false;
   return dados.some((r) => r[1] > 0);
 };
