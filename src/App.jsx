@@ -1149,12 +1149,14 @@ function produtosHistorico(anoMes) {
 }
 
 function produtosDoMes(anoMes) {
+  // Não decide mais "existe ou não" olhando só o valor gravado no código.
+  // Um mês sem entrada manual (ex.: setembro/2026) ainda pode ter dado
+  // vindo inteiramente das fontes ao vivo, e não pode ser descartado cedo.
   const ov = OVERRIDES_DIRETORIA[anoMes];
   const partes = anoMes.split("-");
   const ano = parseInt(partes[0], 10);
   const mes = parseInt(partes[1], 10);
   const hist = produtosHistorico(anoMes);
-  if (!ov && !hist) return null;
   let produtos = { ...(ov?.produtos || {}), ...(hist || {}) };
   Object.keys(FONTES_EXTERNAS).forEach((pid) => {
     if (pid === "consumo_ab") return; // tratado à parte, precisa somar o Fini
@@ -1165,6 +1167,7 @@ function produtosDoMes(anoMes) {
   if (usaFonteExterna("consumo_ab", ano, mes) && ab) {
     produtos = { ...produtos, consumo: ab.total };
   }
+  if (Object.keys(produtos).length === 0) return null;
   return produtos;
 }
 
