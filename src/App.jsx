@@ -5453,11 +5453,15 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   const aReceber = Math.max(0, mensalAtual.devido - mensalAtual.pago);
 
   // Ranking comparativo de promotores
+  // O ranking ao vivo (vindo da planilha) traz [nome, valor, eventos] — sem
+  // "pessoas", que só existe no formato antigo gravado no código. Sem o
+  // "?? 0" aqui, um mês ao vivo tinha pessoas=undefined e quebrava a tabela
+  // na hora de formatar esse número.
   const rankingComparado = promotoresAno.map(([nome, valor, eventos, pessoas], idx) => {
     const ant = promotoresAnt.find(([n]) => n === nome);
     const valorAnt = ant ? ant[1] : 0;
     const delta = valorAnt > 0 ? ((valor - valorAnt) / valorAnt) * 100 : null;
-    return { nome, valor, eventos, pessoas, valorAnt, delta, rank: idx + 1, ticket: eventos > 0 ? valor / eventos : 0 };
+    return { nome, valor, eventos, pessoas: pessoas ?? 0, valorAnt, delta, rank: idx + 1, ticket: eventos > 0 ? valor / eventos : 0 };
   });
 
   // Ranking produtos comparado
