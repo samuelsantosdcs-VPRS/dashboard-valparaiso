@@ -162,72 +162,78 @@ const OVERRIDES_DIRETORIA = {
       acesso: 25423,
       bilheteria_park: 312445.89,
       bilheteria_online: 267874.65,
+      quiosque_ilha: 138900.0,
       assinaturas: 461101.26,
       passaporte_corp: 83860.5,
       consumo: 1642016.61,
       eventos: 203759.7,
     },
-    total: 2971058.61,
+    total: 3109958.61,
   },
   "2025-2": {
     produtos: {
       acesso: 9554,
       bilheteria_park: 63023.94,
       bilheteria_online: 68649.61,
+      quiosque_ilha: 16325.0,
       assinaturas: 169787.83,
       passaporte_corp: 77822.42,
       consumo: 452694.59,
       eventos: 45812.45,
     },
-    total: 877790.84,
+    total: 894115.84,
   },
   "2025-3": {
     produtos: {
       acesso: 14215,
       bilheteria_park: 117265.25,
       bilheteria_online: 73305.91,
+      quiosque_ilha: 17245.0,
       assinaturas: 304821.37,
       passaporte_corp: 89702.63,
       consumo: 757090.4,
       eventos: 65240.51,
     },
-    total: 1407426.07,
+    total: 1424671.07,
   },
   "2025-5": {
     produtos: {
       acesso: 13368,
       bilheteria_park: 112157.52,
       bilheteria_online: 75475.82,
+      quiosque_ilha: 16075.0,
       assinaturas: 207409.39,
       passaporte_corp: 104277.04,
       consumo: 678735.53,
       eventos: 75700.57,
     },
-    total: 1225728.08,
+    total: 1241803.08,
   },
   "2025-6": {
     produtos: {
       acesso: 16353,
       bilheteria_park: 113674.0,
       bilheteria_online: 138810.45,
+      quiosque_ilha: 33325.0,
       assinaturas: 294190.0,
       passaporte_corp: 84023.48,
       consumo: 815092.23,
       eventos: 94021.88,
     },
-    total: 1539812.04,
+    total: 1573137.04,
   },
   "2025-7": {
     produtos: {
       acesso: 49970,
       bilheteria_park: 573246.32,
       bilheteria_online: 662865.62,
+      quiosque_ilha: 286190.0,
       assinaturas: 749500.47,
       passaporte_corp: 84247.06,
       consumo: 3103707.48,
       eventos: 381902.01,
     },
-    total: 5555468.96,
+    total: 5841658.96,
   },
   "2025-8": {
     // Base corrigida em 28/08/2026 pela planilha oficial de metas.
@@ -250,48 +256,53 @@ const OVERRIDES_DIRETORIA = {
       acesso: 15420,
       bilheteria_park: 134050.45,
       bilheteria_online: 141224.26,
+      quiosque_ilha: 37659.7,
       assinaturas: 323282.96,
       passaporte_corp: 91925.74,
       consumo: 804408.16,
       eventos: 139876.44,
     },
-    total: 1634768.01,
+    total: 1672427.71,
   },
   "2025-10": {
     produtos: {
       acesso: 17495,
       bilheteria_park: 158657.55,
       bilheteria_online: 164677.51,
+      quiosque_ilha: 38199.5,
       assinaturas: 318696.21,
       passaporte_corp: 87175.0,
       consumo: 1022489.44,
       eventos: 566475.37,
     },
-    total: 2318171.08,
+    total: 2356370.58,
   },
   "2025-11": {
     produtos: {
       acesso: 16375,
       bilheteria_park: 109914.89,
       bilheteria_online: 112532.97,
+      quiosque_rio_anil: 63035.78,
+      quiosque_ilha: 18995.0,
       assinaturas: 446931.22,
       passaporte_corp: 85318.9,
       consumo: 886580.71,
       eventos: 251027.38,
     },
-    total: 1892306.07,
+    total: 1974336.85,
   },
   "2025-12": {
     produtos: {
       acesso: 18023,
       bilheteria_park: 224041.42,
       bilheteria_online: 279433.9,
+      quiosque_ilha: 52305.0,
       assinaturas: 365718.95,
       passaporte_corp: 98937.13,
       consumo: 1261405.26,
       eventos: 598134.88,
     },
-    total: 2827671.54,
+    total: 2879976.54,
   },
   "2026-4": {
     produtos: {
@@ -1004,6 +1015,76 @@ const CRESCIMENTO_META_POR_ANO = {
 // Como atualizar: edite a chave do mês com a lista de dias.
 // Se o mês não estiver listado, o sistema assume "qui-dom" como padrão.
 // ============================================================
+// ============================================================
+// DIAS DE OPERAÇÃO DO PARQUE — planilha simples, editável por mês
+// ------------------------------------------------------------
+// Uma linha por mês: ano, mês, e os dias abertos separados por vírgula.
+// Muito mais simples que as outras fontes (não é exportada de sistema
+// nenhum, é você quem escreve), então o parser aqui é o mais direto
+// possível: sem filtro de status, sem exclusão, só ano-mês → lista de dias.
+// ============================================================
+const DIAS_PARQUE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=1523785595&single=true&output=csv";
+const DIAS_PARQUE_ATIVO = true;
+
+const DIAS_PARQUE_EXTERNO = { dias: null, atualizadoEm: null, erro: null, carregando: false, linhas: 0 };
+
+async function carregarDiasParqueExterno() {
+  if (!DIAS_PARQUE_ATIVO || !DIAS_PARQUE_URL || DIAS_PARQUE_EXTERNO.carregando) return false;
+  DIAS_PARQUE_EXTERNO.carregando = true;
+  try {
+    const resp = await fetch(`${DIAS_PARQUE_URL}&_=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const linhas = parseCSV(await resp.text());
+    if (linhas.length < 2) throw new Error("planilha vazia");
+
+    const cab = linhas[0].map((h) => h.toLowerCase().trim());
+    const iAno = cab.indexOf("ano");
+    const iMes = cab.indexOf("mes");
+    const iDias = cab.indexOf("dias_abertos");
+    if (iAno < 0 || iMes < 0 || iDias < 0) throw new Error("faltam colunas ano, mes ou dias_abertos");
+
+    // Aceita as duas formas de preencher: uma linha por mês com a lista
+    // inteira ("3,4,5,6") OU uma linha por dia (célula com só "3", "4"...).
+    // Nos dois casos os dias do mesmo mês são somados, nunca substituídos.
+    const conjuntos = {}; // ano-mes → Set de dias
+    let usadas = 0;
+    for (let i = 1; i < linhas.length; i++) {
+      const l = linhas[i];
+      const ano = parseInt(l[iAno], 10);
+      const mes = parseInt(l[iMes], 10);
+      if (!Number.isFinite(ano) || !Number.isFinite(mes)) continue;
+      const lista = (l[iDias] || "")
+        .split(/[,;]/)
+        .map((d) => parseInt(d.trim(), 10))
+        .filter((d) => Number.isFinite(d) && d >= 1 && d <= 31);
+      if (lista.length === 0) continue;
+      const chave = `${ano}-${mes}`;
+      if (!conjuntos[chave]) conjuntos[chave] = new Set();
+      lista.forEach((d) => conjuntos[chave].add(d));
+      usadas += 1;
+    }
+    if (usadas === 0) throw new Error("nenhum mês reconhecido na planilha");
+    const dias = {};
+    Object.entries(conjuntos).forEach(([chave, set]) => {
+      dias[chave] = [...set].sort((a, b) => a - b);
+    });
+
+    DIAS_PARQUE_EXTERNO.dias = dias;
+    DIAS_PARQUE_EXTERNO.linhas = usadas;
+    DIAS_PARQUE_EXTERNO.atualizadoEm = new Date();
+    DIAS_PARQUE_EXTERNO.erro = null;
+    return true;
+  } catch (e) {
+    DIAS_PARQUE_EXTERNO.erro = e.message || "falha ao ler os dias de operação";
+    return false;
+  } finally {
+    DIAS_PARQUE_EXTERNO.carregando = false;
+  }
+}
+
 const DIAS_PARQUE_ABERTO = {
   "2026-4": [2, 3, 4, 5, 9, 10, 11, 12, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26, 30],
   "2026-5": [1, 2, 3, 7, 8, 9, 10, 14, 15, 16, 17, 21, 22, 23, 24, 28, 29, 30, 31],
@@ -1011,6 +1092,10 @@ const DIAS_PARQUE_ABERTO = {
   "2026-7": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
   // Agosto/2026: parque abre apenas de quinta a domingo
   "2026-8": [1, 2, 6, 7, 8, 9, 13, 14, 15, 16, 20, 21, 22, 23, 27, 28, 29, 30],
+  // Setembro/2026: estimativa por repetição do padrão de agosto (quinta a
+  // domingo). NÃO CONFIRMADO — se algum feriado ou fechamento excepcional
+  // mudou esse calendário em setembro, corrija esta lista.
+  "2026-9": [3, 4, 5, 6, 10, 11, 12, 13, 17, 18, 19, 20, 24, 25, 26, 27],
 };
 
 // Helper: retorna lista de dias abertos para um ano/mês
@@ -1018,6 +1103,9 @@ const DIAS_PARQUE_ABERTO = {
 // Senão, calcula automaticamente como qui-dom
 function getDiasParqueAberto(ano, mes) {
   const chave = `${ano}-${mes}`;
+  if (DIAS_PARQUE_ATIVO && DIAS_PARQUE_EXTERNO.dias?.[chave]) {
+    return DIAS_PARQUE_EXTERNO.dias[chave];
+  }
   if (DIAS_PARQUE_ABERTO[chave]) {
     return DIAS_PARQUE_ABERTO[chave];
   }
@@ -2336,6 +2424,7 @@ const carregarTodasFontes = () =>
     ...Object.keys(FONTES_EXTERNAS).filter((p) => FONTES_EXTERNAS[p].ativo && FONTES_EXTERNAS[p].url)
       .map((p) => carregarFonteExterna(p)),
     carregarHistoricoExterno(),
+    carregarDiasParqueExterno(),
   ]);
 
 // Série diária externa no formato do produto pedido.
@@ -2756,7 +2845,11 @@ export default function App() {
   // Aviso do histórico mensal fechado, só quando o mês selecionado for
   // um ano anterior a 2026 (é o único período que essa fonte cobre).
   const avisoHistorico = (() => {
-    if (!HISTORICO_ATIVO || ano >= 2026) return null;
+    // Mostra sempre que o histórico for relevante: tanto quando o mês
+    // selecionado é um ano fechado, quanto quando é 2026 (porque a
+    // comparação "ano anterior" de qualquer mês de 2026 também depende
+    // dessa mesma planilha, e antes isso ficava invisível).
+    if (!HISTORICO_ATIVO) return null;
     if (HISTORICO_EXTERNO.erro) {
       return { pid: "historico", cor: "#f59e0b", texto: `Histórico mensal indisponível (${HISTORICO_EXTERNO.erro}). Exibindo os últimos valores gravados no painel.` };
     }
@@ -2764,10 +2857,28 @@ export default function App() {
       return { pid: "historico", cor: "#78716c", texto: "Lendo o histórico mensal..." };
     }
     const hora = HISTORICO_EXTERNO.atualizadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const temEsteMes = !!produtosHistorico(`${ano}-${mes}`);
+    const mesRelevante = ano >= 2026 ? `${ano - 1}-${mes}` : `${ano}-${mes}`;
+    const temEsteMes = !!produtosHistorico(mesRelevante);
     return {
       pid: "historico", cor: "#10b981",
-      texto: `Histórico mensal lido às ${hora} · ${HISTORICO_EXTERNO.linhas} meses no relatório${temEsteMes ? " · este mês veio da planilha" : " · este mês segue com o valor gravado no painel"}`,
+      texto: `Histórico mensal lido às ${hora} · ${HISTORICO_EXTERNO.linhas} meses no relatório${temEsteMes ? ` · ${mesRelevante} veio da planilha` : ` · ${mesRelevante} segue com o valor gravado no painel`}`,
+    };
+  })();
+
+  // Aviso dos dias de operação do parque, só quando essa fonte está ligada.
+  const avisoDiasParque = (() => {
+    if (!DIAS_PARQUE_ATIVO) return null;
+    if (DIAS_PARQUE_EXTERNO.erro) {
+      return { pid: "dias_parque", cor: "#f59e0b", texto: `Planilha de dias de operação indisponível (${DIAS_PARQUE_EXTERNO.erro}). Usando o calendário gravado no painel.` };
+    }
+    if (!DIAS_PARQUE_EXTERNO.atualizadoEm) {
+      return { pid: "dias_parque", cor: "#78716c", texto: "Lendo os dias de operação..." };
+    }
+    const hora = DIAS_PARQUE_EXTERNO.atualizadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const temEsteMes = !!DIAS_PARQUE_EXTERNO.dias?.[`${ano}-${mes}`];
+    return {
+      pid: "dias_parque", cor: "#10b981",
+      texto: `Dias de operação lidos às ${hora} · ${DIAS_PARQUE_EXTERNO.linhas} meses na planilha${temEsteMes ? " · este mês veio de lá" : " · este mês usa o padrão automático (qui-dom)"}`,
     };
   })();
 
@@ -3203,7 +3314,7 @@ export default function App() {
       </header>
 
       {/* Estado das fontes externas */}
-      {[...avisosFonte, ...(avisoHistorico ? [avisoHistorico] : [])].map((avisoFonte, idxAviso) => (
+      {[...avisosFonte, ...(avisoHistorico ? [avisoHistorico] : []), ...(avisoDiasParque ? [avisoDiasParque] : [])].map((avisoFonte, idxAviso) => (
         <div
           key={`${avisoFonte.pid}-${versaoDados}`}
           className="mb-2 px-4 py-2 rounded-lg flex items-center gap-2"
@@ -10518,20 +10629,25 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   }
   const maxOcupacao = Math.max(...calendarioOcupacao.map((c) => c.valor), 1);
 
-  // Ranking dos consultores V+ (top 10, já filtrando os excluídos)
-  const rankingCombinado = (DADOS_PROMOTORES?.[`${ano}-${mes}`] || [])
-    .filter((r) => !CONSULTORES_EXCLUIDOS.has(r[0]))
+  // Ranking dos consultores V+ (top 10, já filtrando os excluídos).
+  // Usa a mesma função que já sobrepõe a planilha ao valor gravado —
+  // antes lia DADOS_PROMOTORES direto e ficava "sem dados" em qualquer
+  // mês que só existisse ao vivo (ex.: setembro).
+  const rankingCombinado = getRankingConsultores(ano, mes)
     .slice(0, 10)
-    .map((r) => ({ nome: r[0], valor: r[1], origem: "V+", cor: "#10b981" }));
+    .map((r) => ({ nome: r.nome, valor: r.valor, origem: "V+", cor: "#10b981" }));
 
-  // KPIs adicionais (acessos totais do parque — usado só nos KPIs, não nos calendários)
-  const acSerie = DADOS_ACESSO?.diario?.[`${ano}-${mes}`] || [];
+  // KPIs adicionais (acessos totais do parque — usado só nos KPIs, não nos calendários).
+  // Mesma correção: usa as funções que já checam a planilha (serieAcesso,
+  // resumoOnline, resumoParque) em vez de ler DADOS_ACESSO/DADOS_BILHETERIA
+  // direto, que ficavam zeradas em qualquer mês sem entrada manual.
+  const acSerie = serieAcesso(ano, mes);
   const totalAcessos = acSerie.reduce((a, r) => a + r[1], 0);
   const ticketMedio = totalAcessos > 0 ? totalRealizado / totalAcessos : 0;
-  
+
   // Taxa de conversão: ingressos (bilheteria) / acessos totais
-  const totalIngressos = (DADOS_BILHETERIA?.resumo?.[`${ano}-${mes}`]?.venda_ingressos || 0) +
-                         (DADOS_BILHETERIA_FISICA?.mensal?.[`${ano}-${mes}`]?.total_ingressos || 0);
+  const totalIngressos = (resumoOnline(ano, mes)?.venda_ingressos || 0) +
+                         (resumoParque(ano, mes)?.total_ingressos || 0);
   const taxaConversao = totalAcessos > 0 ? (totalIngressos / totalAcessos) * 100 : 0;
 
   // Per capita = ticket médio
