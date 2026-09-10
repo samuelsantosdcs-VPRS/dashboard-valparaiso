@@ -1760,10 +1760,13 @@ const FONTES_EXTERNAS = {
     rotulo: "A&B",
     ativo: true,
     meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
-    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=176043632&single=true&output=csv",
+    url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=501087358&single=true&output=csv",
     colunas: {
       data: ["data"],
-      valor: ["valor_total_venda"],
+      // O painel mostra o valor líquido (depois de desconto). Mantém
+      // receita_bruta e o nome antigo como reserva, caso a coluna líquida
+      // falte em algum export.
+      valor: ["receita_liquida", "receita_bruta", "valor_total_venda"],
       competencia: ["competencia"],
     },
     excluirColuna: "loja",
