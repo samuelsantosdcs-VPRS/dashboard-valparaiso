@@ -2465,7 +2465,11 @@ function serieAcesso(ano, mes) {
 // Sem isso a aba de Acesso mostrava o número gravado e a Visão Executiva
 // mostrava o da planilha, dois valores diferentes para a mesma coisa.
 function resumoAcesso(ano, mes) {
-  const gravado = DADOS_ACESSO.mensal[`${ano}-${mes}`];
+  const gravadoBruto = DADOS_ACESSO.mensal[`${ano}-${mes}`];
+  // Alguns meses gravados são de antes de certos campos existirem — sem
+  // o default, um consumidor chamando .toLocaleString() num campo ausente
+  // derrubava a tela inteira.
+  const gravado = gravadoBruto ? { total: 0, categorias: [], ...gravadoBruto } : gravadoBruto;
   const total = totalExterno("acesso", ano, mes);
   if (total === null || total === undefined) return gravado;
   const ind = indicadoresAcesso(ano, mes);
@@ -2478,7 +2482,10 @@ function resumoAcesso(ano, mes) {
 
 // Resumo mensal da Bilheteria Park, com a planilha por cima quando ligada.
 function resumoParque(ano, mes) {
-  const gravado = DADOS_BILHETERIA_FISICA.mensal[`${ano}-${mes}`];
+  const gravadoBruto = DADOS_BILHETERIA_FISICA.mensal[`${ano}-${mes}`];
+  const gravado = gravadoBruto
+    ? { total: 0, total_ingressos: 0, ticket_medio: 0, dias: [], produtos: [], operadores: [], ...gravadoBruto }
+    : gravadoBruto;
   const externo = serieExterna("bilheteria_park", ano, mes);
   if (!externo) return gravado;
   const total = externo.reduce((a, r) => a + r[1], 0);
@@ -2503,7 +2510,10 @@ function indicadoresParque(ano, mes) {
 
 // Resumo mensal do Quiosque Ilha, com a planilha por cima quando ligada.
 function resumoQuiosque(ano, mes) {
-  const gravado = DADOS_QUIOSQUE.mensal[`${ano}-${mes}`];
+  const gravadoBruto = DADOS_QUIOSQUE.mensal[`${ano}-${mes}`];
+  const gravado = gravadoBruto
+    ? { total: 0, ingressos: 0, ticket_medio: 0, localizadores: 0, dias: [], produtos: [], categorias: [], ...gravadoBruto }
+    : gravadoBruto;
   const externo = serieExterna("quiosque_ilha", ano, mes);
   if (!externo) return gravado;
   const total = externo.reduce((a, r) => a + r[1], 0);
@@ -2527,7 +2537,12 @@ function resumoQuiosque(ano, mes) {
 
 // Resumo mensal de Eventos, com a planilha por cima quando ligada.
 function resumoEventos(ano, mes) {
-  const gravado = DADOS_EVENTOS.mensal[`${ano}-${mes}`];
+  const gravadoBruto = DADOS_EVENTOS.mensal[`${ano}-${mes}`];
+  // 64 dos meses gravados no código são de antes do campo "pessoas"
+  // existir — sem esse default, qualquer comparação com um desses meses
+  // (ex.: "ano anterior") batia num .toLocaleString() sobre undefined e
+  // derrubava a tela inteira.
+  const gravado = gravadoBruto ? { pessoas: 0, ...gravadoBruto } : gravadoBruto;
   const externo = serieExterna("eventos", ano, mes);
   if (!externo) return gravado;
   const pago = Math.round(externo.reduce((a, r) => a + r[1], 0) * 100) / 100;
@@ -2546,7 +2561,10 @@ function diarioEventos(ano, mes) {
 
 // Resumo mensal de Convênios, com a planilha por cima quando ligada.
 function resumoConvenios(ano, mes) {
-  const gravado = DADOS_CORPORATIVO.mensal[`${ano}-${mes}`];
+  const gravadoBruto = DADOS_CORPORATIVO.mensal[`${ano}-${mes}`];
+  const gravado = gravadoBruto
+    ? { registros: 0, pago: 0, devido: 0, empresas_pagantes: 0, ...gravadoBruto }
+    : gravadoBruto;
   const externo = serieExterna("passaporte_corp", ano, mes);
   if (!externo) return gravado;
   const pago = Math.round(externo.reduce((a, r) => a + r[1], 0) * 100) / 100;
@@ -2627,7 +2645,14 @@ function horariosVendaOnline(ano, mes) {
 
 // Resumo do e-commerce, recalculado a partir da planilha quando ligada.
 function resumoOnline(ano, mes) {
-  const gravado = DADOS_BILHETERIA.resumo[`${ano}-${mes}`];
+  const gravadoBruto = DADOS_BILHETERIA.resumo[`${ano}-${mes}`];
+  const gravado = gravadoBruto
+    ? {
+        venda_valor: 0, venda_ingressos: 0, venda_vouchers: 0,
+        visita_valor: 0, visita_ingressos: 0, visita_vouchers: 0,
+        ticket_ingresso: 0, ticket_voucher: 0, ...gravadoBruto,
+      }
+    : gravadoBruto;
   const externo = serieExterna("bilheteria_online", ano, mes);
   if (!externo) return gravado;
   const soma = (serie, i) => serie.reduce((a, r) => a + (r[i] || 0), 0);
