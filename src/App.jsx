@@ -2038,6 +2038,11 @@ function competenciaBate(bruto, ano, mes) {
   if (!t) return true; // sem essa coluna na planilha: não filtra por aqui
   const compAlvo = `${ano}-${String(mes).padStart(2, "0")}`;
   if (t === compAlvo) return true;
+  // Aceita "2026-9" (mês sem zero à esquerda) além do "2026-09" padrão —
+  // achado em linhas reais da planilha de Eventos, e o formato de data
+  // completa abaixo não cobre esse caso (não tem dia).
+  const mSemZero = /^(\d{4})-(\d{1,2})$/.exec(t);
+  if (mSemZero && parseInt(mSemZero[1], 10) === ano && parseInt(mSemZero[2], 10) === mes) return true;
   const d = diaEMes(t);
   return !!d && d.ano === ano && d.mes === mes;
 }
