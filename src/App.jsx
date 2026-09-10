@@ -2812,8 +2812,131 @@ const getValorConsultor = (ano, mes, nome) => {
 // ============================================================
 // COMPONENTE
 // ============================================================
+// ============================================================
+// PERFIS DE ACESSO — divisória de uso, não segurança forte.
+// O código roda inteiro no navegador de quem acessa; qualquer pessoa com
+// conhecimento técnico básico consegue ver essas senhas no código-fonte.
+// Isso organiza quem vê o quê no dia a dia, não impede acesso deliberado.
+// "abas: null" = Pleno, enxerga tudo. Gerente só vê as abas listadas.
+// ============================================================
+const USUARIOS = [
+  { usuario: "milton", senha: "M1258", papel: "gerente", nome: "Milton", abas: ["assinaturas"] },
+  { usuario: "nathan", senha: "N1259", papel: "gerente", nome: "Nathan", abas: ["eventos"] },
+  { usuario: "samara", senha: "S1260", papel: "gerente", nome: "Samara", abas: ["consumo"] },
+  { usuario: "kamylla", senha: "K1261", papel: "gerente", nome: "Kamylla", abas: ["passaporte_corp"] },
+  { usuario: "gabriel", senha: "G1262", papel: "gerente", nome: "Gabriel", abas: ["trafego_pago"] },
+  { usuario: "samuel", senha: "S1263", papel: "pleno", nome: "Samuel", abas: null },
+  { usuario: "roselia", senha: "R1264", papel: "pleno", nome: "Roselia", abas: null },
+  { usuario: "pablo", senha: "P1265", papel: "pleno", nome: "Pablo", abas: null },
+];
+
+const SESSAO_CHAVE = "vp_painel_sessao";
+
+function lerSessaoSalva() {
+  try {
+    const bruto = localStorage.getItem(SESSAO_CHAVE);
+    if (!bruto) return null;
+    const { usuario } = JSON.parse(bruto);
+    return USUARIOS.find((u) => u.usuario === usuario) || null;
+  } catch {
+    return null;
+  }
+}
+
+function LoginScreen({ onEntrar }) {
+  const [usuario, setUsuario] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState("");
+
+  const entrar = (e) => {
+    e.preventDefault();
+    const achado = USUARIOS.find(
+      (u) => u.usuario === usuario.trim().toLowerCase() && u.senha === senha.trim()
+    );
+    if (!achado) {
+      setErro("Usuário ou senha incorretos.");
+      return;
+    }
+    try { localStorage.setItem(SESSAO_CHAVE, JSON.stringify({ usuario: achado.usuario })); } catch {}
+    onEntrar(achado);
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: "#0c0a09", fontFamily: "Geist, sans-serif",
+    }}>
+      <form onSubmit={entrar} style={{
+        width: 340, padding: "2rem", borderRadius: 16,
+        background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+      }}>
+        <div style={{ fontSize: 22, fontWeight: 300, color: "#fbbf24", marginBottom: 4, fontFamily: "Fraunces, serif" }}>
+          Valparaíso Adventure Park
+        </div>
+        <div style={{ fontSize: 13, color: "#78716c", marginBottom: 24 }}>Painel Comercial · Diretoria</div>
+
+        <label style={{ fontSize: 12, color: "#a8a29e", display: "block", marginBottom: 6 }}>Usuário</label>
+        <input
+          value={usuario}
+          onChange={(e) => setUsuario(e.target.value)}
+          autoFocus
+          style={{
+            width: "100%", padding: "10px 12px", marginBottom: 16, borderRadius: 8,
+            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+            color: "#e7e5e4", fontSize: 14,
+          }}
+        />
+
+        <label style={{ fontSize: 12, color: "#a8a29e", display: "block", marginBottom: 6 }}>Senha</label>
+        <input
+          type="password"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          style={{
+            width: "100%", padding: "10px 12px", marginBottom: 8, borderRadius: 8,
+            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+            color: "#e7e5e4", fontSize: 14,
+          }}
+        />
+
+        {erro && <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 12 }}>{erro}</div>}
+
+        <button type="submit" style={{
+          width: "100%", padding: "10px 12px", marginTop: 8, borderRadius: 8, border: "none",
+          background: "linear-gradient(135deg, #fbbf24, #f59e0b)", color: "#1c1917",
+          fontWeight: 600, fontSize: 14, cursor: "pointer",
+        }}>
+          Entrar
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function App() {
-  const [produtoId, setProdutoId] = useState("visao_executiva");
+  // Sessão do usuário: sem isso logo no topo, o resto do componente nem
+  // deveria montar — é o que garante que gerente nunca chega a ver as
+  // fontes/abas de outro produto, nem por um instante.
+  const [sessao, setSessao] = useState(() => lerSessaoSalva());
+  const sair = () => {
+    try { localStorage.removeItem(SESSAO_CHAVE); } catch {}
+    setSessao(null);
+  };
+  const abasPermitidas = sessao && sessao.papel === "gerente" ? sessao.abas : null; // null = Pleno, vê tudo
+  const podeVerAba = (id) => !abasPermitidas || abasPermitidas.includes(id);
+
+  const [produtoId, setProdutoId] = useState(() => {
+    const s = lerSessaoSalva();
+    if (s && s.papel === "gerente" && s.abas?.length) return s.abas[0];
+    return "visao_executiva";
+  });
+  // Segurança de UX: se por qualquer motivo o produtoId apontar para uma
+  // aba fora da lista do gerente, volta sozinho para a aba dele.
+  useEffect(() => {
+    if (abasPermitidas && !abasPermitidas.includes(produtoId)) {
+      setProdutoId(abasPermitidas[0]);
+    }
+  }, [produtoId, abasPermitidas]);
   // Mês/ano padrão = mês corrente, com fallback para o último mês que tem
   // dados cadastrados em OVERRIDES_DIRETORIA (evita abrir num mês vazio).
   const [anoInicial, mesInicial] = (() => {
@@ -3109,6 +3232,16 @@ export default function App() {
   const anos = [2023, 2024, 2025, 2026];
   const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
+  // Sem sessão, nada do painel é montado — nem os hooks acima chegam a
+  // buscar as planilhas de verdade em produção (a busca em si é inofensiva,
+  // mas não faz sentido gastar a chamada antes do login).
+  if (!sessao) {
+    return <LoginScreen onEntrar={(u) => {
+      setSessao(u);
+      if (u.papel === "gerente" && u.abas?.length) setProdutoId(u.abas[0]);
+    }} />;
+  }
+
   return (
     <div
       className="min-h-screen p-6 md:p-10"
@@ -3287,6 +3420,7 @@ export default function App() {
         {/* Seletor de produto */}
         {modoVisao === "mensal" && (
         <div className="mt-6 flex flex-wrap gap-2 items-center">
+          {podeVerAba("visao_executiva") && (
           <button
             className="prod-btn"
             onClick={() => setProdutoId("visao_executiva")}
@@ -3299,6 +3433,8 @@ export default function App() {
           >
             📊 Visão Executiva
           </button>
+          )}
+          {podeVerAba("painel_a4") && (
           <button
             className="prod-btn"
             onClick={() => setProdutoId("painel_a4")}
@@ -3311,6 +3447,8 @@ export default function App() {
           >
             📄 Painel Diretoria A4
           </button>
+          )}
+          {podeVerAba("trafego_pago") && (
           <button
             className="prod-btn"
             onClick={() => setProdutoId("trafego_pago")}
@@ -3323,8 +3461,9 @@ export default function App() {
           >
             📣 Tráfego Pago
           </button>
+          )}
           <div className="w-px h-6 bg-white/10 mx-1" />
-          {PRODUTOS.map((p) => (
+          {PRODUTOS.filter((p) => podeVerAba(p.id)).map((p) => (
             <button
               key={p.id}
               className={`prod-btn ${produtoId === p.id ? "active" : ""} ${!p.real ? "pending" : ""}`}
@@ -3337,6 +3476,17 @@ export default function App() {
               {!p.real && <span className="chip-neutro ml-2" style={{fontSize:10}}>pendente</span>}
             </button>
           ))}
+          <div className="w-px h-6 bg-white/10 mx-1" />
+          <div className="flex items-center gap-2 ml-auto text-xs text-stone-400">
+            <span>{sessao.nome} · {sessao.papel === "pleno" ? "Pleno" : "Gerente"}</span>
+            <button
+              onClick={sair}
+              className="px-2 py-1 rounded"
+              style={{ border: "1px solid rgba(255,255,255,0.15)", color: "#a8a29e" }}
+            >
+              Sair
+            </button>
+          </div>
         </div>
         )}
 
