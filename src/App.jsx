@@ -10602,7 +10602,7 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
   // CALENDÁRIOS E-COMMERCE (Bilheteria Online)
   // Vendas Diárias = valor vendido por data da venda
-  const calVendaEcom = DADOS_BILHETERIA?.calendario_venda?.[`${ano}-${mes}`] || [];
+  const calVendaEcom = calendarioVendaOnline(ano, mes);
   const mapVendaEcom = new Map(calVendaEcom.map((r) => [r[0], { valor: r[1], ingressos: r[2] }]));
   const calendarioVendas = [];
   for (let d = 1; d <= diasMes; d++) {
@@ -10616,7 +10616,7 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
   const maxVendas = Math.max(...calendarioVendas.map((c) => c.valor), 1);
 
   // Ocupação = ingressos agendados por data da visita (quantas pessoas vêm)
-  const calVisitaEcom = DADOS_BILHETERIA?.calendario_visita?.[`${ano}-${mes}`] || [];
+  const calVisitaEcom = calendarioVisitaOnline(ano, mes);
   const mapVisitaEcom = new Map(calVisitaEcom.map((r) => [r[0], { valor: r[1], ingressos: r[2] }]));
   const calendarioOcupacao = [];
   for (let d = 1; d <= diasMes; d++) {
@@ -11799,8 +11799,8 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
 
       {/* V+ POR CANAL — Sala de Vendas vs Digital */}
       {(() => {
-        const promotores = (DADOS_PROMOTORES?.[`${ano}-${mes}`] || [])
-          .filter((r) => !CONSULTORES_EXCLUIDOS.has(r[0]));
+        const promotores = getRankingConsultores(ano, mes)
+          .map((r) => [r.nome, r.valor]);
         if (promotores.length === 0) return null;
         let sala = 0, digital = 0, outros = 0;
         promotores.forEach((r) => {
