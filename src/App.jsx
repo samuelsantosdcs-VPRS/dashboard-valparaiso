@@ -7682,7 +7682,10 @@ function BilheteriaFisicaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
         const totalPag = (ind.pagamentos || []).reduce((a, g) => a + g[1], 0);
 
         const Barra = ({ lista, cor, total, limite = 8 }) => {
-          const itens = (lista || []).slice(0, limite);
+          // Linha vinda de planilha incompleta ou indisponível pode não ter
+          // o valor numérico — sem isso, um item assim derrubava a tela
+          // inteira em vez de só mostrar "0" naquela linha.
+          const itens = (lista || []).slice(0, limite).map(([rot, n]) => [rot, n ?? 0]);
           if (itens.length === 0) return null;
           const maior = Math.max(...itens.map((i) => i[1]), 1);
           return (
@@ -10032,7 +10035,7 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
         // lista: em listas ordenadas por hora o primeiro item é pequeno e as
         // barras estouravam o quadro.
         const Barra = ({ lista, cor, limite = 8 }) => {
-          const itens = (lista || []).slice(0, limite);
+          const itens = (lista || []).slice(0, limite).map(([rot, n]) => [rot, n ?? 0]);
           if (itens.length === 0) return null;
           const maior = Math.max(...itens.map((i) => i[1]), 1);
           return (
