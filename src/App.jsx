@@ -2050,9 +2050,14 @@ function competenciaBate(bruto, ano, mes) {
 // Aceita "01/08/2026", "01/08/2026 14:32" e "2026-08-01"
 function diaEMes(bruto) {
   const t = String(bruto || "").trim();
-  let m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(t);
+  // Dia/mês SEM zero à esquerda (ex.: "1/9/2026"): o Google Sheets às vezes
+  // exporta datas de fórmula (FILTER, cópia de outra aba) assim no CSV
+  // publicado, mesmo quando a própria planilha exibe "01/09/2026" na tela.
+  // Sem aceitar 1-2 dígitos aqui, toda a competência do mês falhava e a
+  // aba parecia "sem dados" com o arquivo cheio de linhas válidas.
+  let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(t);
   if (m) return { dia: +m[1], mes: +m[2], ano: +m[3] };
-  m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+  m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t);
   if (m) return { dia: +m[3], mes: +m[2], ano: +m[1] };
   return null;
 }
