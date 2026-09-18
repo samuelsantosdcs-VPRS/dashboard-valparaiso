@@ -2828,6 +2828,7 @@ const USUARIOS = [
   { usuario: "samuel", senha: "S1263", papel: "pleno", nome: "Samuel", abas: null },
   { usuario: "roselia", senha: "R1264", papel: "pleno", nome: "Roselia", abas: null },
   { usuario: "pablo", senha: "P1265", papel: "pleno", nome: "Pablo", abas: null },
+  { usuario: "fernanda", senha: "F1266", papel: "gerente", nome: "Fernanda", abas: ["assinaturas"] },
 ];
 
 const SESSAO_CHAVE = "vp_painel_sessao";
