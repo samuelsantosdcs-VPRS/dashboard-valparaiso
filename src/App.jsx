@@ -2066,10 +2066,26 @@ async function carregarFonteExterna(produto) {
     // O parâmetro de tempo derruba cache de navegador e de CDN intermediário.
     // O cache do próprio Google no CSV publicado (~5 min) não tem como burlar.
     const sep = f.url.includes("?") ? "&" : "?";
-    const resp = await fetch(`${f.url}${sep}_=${Date.now()}`, {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache" },
-    });
+    // Timeout próprio: sem isso, uma planilha muito grande ou lenta para
+    // publicar deixa o fetch pendurado indefinidamente e a aba parece
+    // "não carregar" sem nunca mostrar um erro no aviso de status.
+    const controlador = new AbortController();
+    const timeoutId = setTimeout(() => controlador.abort(), 30000);
+    let resp;
+    try {
+      resp = await fetch(`${f.url}${sep}_=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+        signal: controlador.signal,
+      });
+    } catch (erroFetch) {
+      if (erroFetch.name === "AbortError") {
+        throw new Error("tempo esgotado (planilha muito grande ou lenta para responder — 30s)");
+      }
+      throw erroFetch;
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const linhas = parseCSV(await resp.text());
     if (linhas.length < 2) throw new Error("planilha vazia");
@@ -3585,6 +3601,12 @@ export default function App() {
               }
               neutral
             />
+            <CardVendaDoDia
+              rotulo="Assinaturas V+"
+              serieDias={getSerie(ano, mes).map((r) => [r.dia, r.valor])}
+              ano={ano}
+              mes={mes}
+            />
           </section>
 
           {/* META CARD */}
@@ -3845,6 +3867,73 @@ function KPICard({ icon, label, value, sub, delta, neutral }) {
       </div>
       <div className="text-xs text-stone-500 leading-relaxed">{sub}</div>
     </div>
+  );
+}
+
+// ============================================================
+// VENDA DO DIA — card reutilizável para qualquer aba
+// Mostra o valor do dia atual (se o mês em tela for o mês corrente) ou do
+// último dia com lançamento (para meses passados/futuros), comparado ao
+// dia anterior com dado.
+// ============================================================
+function normalizarSerieDias(bruto) {
+  // Aceita tanto array [[dia, valor, ...], ...] quanto objeto {"12": valor}.
+  if (!bruto) return [];
+  if (Array.isArray(bruto)) {
+    return bruto
+      .map((r) => [Number(r[0]), Number(r[1]) || 0])
+      .filter((r) => Number.isFinite(r[0]))
+      .sort((a, b) => a[0] - b[0]);
+  }
+  if (typeof bruto === "object") {
+    return Object.entries(bruto)
+      .map(([d, v]) => [Number(d), Number(v) || 0])
+      .filter((r) => Number.isFinite(r[0]))
+      .sort((a, b) => a[0] - b[0]);
+  }
+  return [];
+}
+
+function CardVendaDoDia({ rotulo, serieDias, ano, mes, unidade = "valor", icon }) {
+  const dias = normalizarSerieDias(serieDias);
+  if (dias.length === 0) return null;
+
+  const hoje = new Date();
+  const ehMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth() + 1;
+  const diaHoje = hoje.getDate();
+
+  // Mês corrente: procura o dia de hoje; se ainda não foi lançado, recua
+  // para o último dia disponível. Mês passado/futuro: usa direto o último
+  // dia com lançamento no mês.
+  let idxAlvo = -1;
+  if (ehMesAtual) {
+    idxAlvo = dias.findIndex((r) => r[0] === diaHoje);
+    if (idxAlvo < 0) {
+      for (let i = dias.length - 1; i >= 0; i--) {
+        if (dias[i][0] <= diaHoje) { idxAlvo = i; break; }
+      }
+    }
+  }
+  if (idxAlvo < 0) idxAlvo = dias.length - 1;
+
+  const [diaAlvo, valorAlvo] = dias[idxAlvo];
+  const anterior = idxAlvo > 0 ? dias[idxAlvo - 1] : null;
+  const delta = anterior && anterior[1] > 0 ? ((valorAlvo - anterior[1]) / anterior[1]) * 100 : undefined;
+  const formatar = unidade === "qtd" ? (v) => Math.round(v).toLocaleString("pt-BR") : formatBRL;
+
+  const rotuloDia = ehMesAtual && diaAlvo === diaHoje ? "Venda de hoje" : `Último dia lançado (${String(diaAlvo).padStart(2, "0")})`;
+  const sub = anterior
+    ? `dia anterior (${String(anterior[0]).padStart(2, "0")}): ${formatar(anterior[1])}`
+    : "sem dia anterior no mês para comparar";
+
+  return (
+    <KPICard
+      icon={icon || <Calendar size={16} />}
+      label={rotuloDia}
+      value={formatar(valorAlvo)}
+      sub={`${rotulo} · ${sub}`}
+      delta={delta}
+    />
   );
 }
 
@@ -5086,6 +5175,7 @@ function ConsumoAB({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           sub={melhorDia ? `Dia ${melhorDia[0]} · pior dia: ${formatBRL(piorDia ? piorDia[1] : 0)} (dia ${piorDia ? piorDia[0] : "—"})` : "—"}
           neutral
         />
+        <CardVendaDoDia rotulo="Consumo (A&B)" serieDias={d26.dias} ano={ano} mes={mes} />
       </section>
 
       {/* CARDS DE SEGMENTAÇÃO: A&B / FINE / TOTAL */}
@@ -5667,6 +5757,7 @@ function EventosView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           sub={mensalAnt ? `${ano - 1}: ${formatBRL(tktAnt)}` : "—"}
           delta={deltaTkt}
         />
+        <CardVendaDoDia rotulo="Eventos (recebido)" serieDias={diario} ano={ano} mes={mes} />
       </section>
 
       {/* STATUS DOS EVENTOS — vindo da planilha (inclui os cancelados, que
@@ -6628,6 +6719,7 @@ function BilheteriaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           sub={`${resumoAtual.visita_vouchers.toLocaleString("pt-BR")} vouchers · valor: ${formatBRL(resumoAtual.visita_valor)}`}
           neutral
         />
+        <CardVendaDoDia rotulo="Bilheteria Online" serieDias={venda.map((r) => [r[0], r[1]])} ano={ano} mes={mes} />
       </section>
 
       {/* META +20% */}
@@ -7850,6 +7942,7 @@ function BilheteriaFisicaView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           sub={melhorDia ? `Dia ${melhorDia[0]} · ${melhorDia[2]} ingressos` : "—"}
           neutral
         />
+        <CardVendaDoDia rotulo="Bilheteria Park" serieDias={dados.dias} ano={ano} mes={mes} />
       </section>
 
       {/* INDICADORES DE OPERAÇÃO — vindos da planilha da Bilheteria Park */}
@@ -8557,6 +8650,7 @@ function QuiosqueView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
         <KPICard icon={<Users size={16} />} label="Ingressos" value={ingressos.toLocaleString("pt-BR")} sub={`${dados.localizadores || 0} pedidos no mês`} />
         <KPICard icon={<TrendingUp size={16} />} label="Ticket médio" value={formatBRL(ticket)} sub="por ingresso" />
         <KPICard icon={<Calendar size={16} />} label="Média por dia aberto" value={formatBRL(mediaDia)} sub={`projeção do mês ${formatBRL(projecao)}`} />
+        <CardVendaDoDia rotulo="Quiosque Ilha" serieDias={dados.dias} ano={ano} mes={mes} />
       </section>
 
       <div className="card rounded-xl p-6 mb-6">
@@ -9688,6 +9782,7 @@ function CorporativoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           sub={`${pctInadimplencia.toFixed(1)}% do faturado ainda não recebido`}
           neutral
         />
+        <CardVendaDoDia rotulo="Convênio (recebido)" serieDias={diario} ano={ano} mes={mes} />
       </section>
 
       {/* FORMAS DE PAGAMENTO — vindo da planilha (boleto, pix, cartão recorrente) */}
@@ -10198,6 +10293,7 @@ function AcessoView({ ano, mes, diaCorte, diaInicio = 1, meses }) {
           sub={categoriaPrincipal ? `${categoriaPrincipal[1].toLocaleString("pt-BR")} acessos · ${((categoriaPrincipal[1] / dados.total) * 100).toFixed(0)}%` : "—"}
           neutral
         />
+        <CardVendaDoDia rotulo="Acessos" serieDias={diario} ano={ano} mes={mes} unidade="qtd" icon={<Users size={16} />} />
       </section>
       {/* INDICADORES DE PÚBLICO — vindos da planilha de acesso */}
       {(() => {
