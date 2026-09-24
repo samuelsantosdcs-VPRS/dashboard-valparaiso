@@ -4780,6 +4780,7 @@ function ArenaView({ ranking, ano, mes, meses }) {
 
   const baixarPNG = async () => {
     setGerandoPng(true);
+    const elemento = document.querySelector('#arena-captura');
     try {
       if (!window.html2canvas) {
         const carregarScript = (src) => new Promise((resolve, reject) => {
@@ -4795,15 +4796,41 @@ function ArenaView({ ranking, ano, mes, meses }) {
           await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
         }
       }
-      const elemento = document.querySelector('#arena-captura');
       if (!elemento) throw new Error('Área do ranking não encontrada');
-      await new Promise((r) => setTimeout(r, 150));
+
+      // Congela as animações de entrada dos cartões/linhas — sem isso o
+      // html2canvas pode fotografar tudo no meio do fade-in (apagado/cortado).
+      elemento.classList.add('arena-captura-congelada');
+
+      // Garante que as fontes da marca (ValpFont / Blogger Sans) terminaram
+      // de carregar antes da captura — senão o texto sai com glifos sobrepostos.
+      try {
+        await Promise.all([
+          document.fonts.load('400 40px "ValpFont"'),
+          document.fonts.load('700 16px "Blogger Sans"'),
+          document.fonts.load('400 16px "Blogger Sans"'),
+          document.fonts.ready,
+        ]);
+      } catch (e) { /* segue mesmo se o navegador não suportar */ }
+
+      // Duas voltas de rAF + uma pausa curta garantem que o navegador já
+      // aplicou o estilo "congelado" e re-renderizou com a fonte certa
+      // antes do html2canvas tirar a "foto".
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise((r) => setTimeout(r, 200));
+
       const canvas = await window.html2canvas(elemento, {
-        backgroundColor: '#0a0a0a',
+        backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
         allowTaint: true,
         logging: false,
+        width: elemento.scrollWidth,
+        height: elemento.scrollHeight,
+        windowWidth: elemento.scrollWidth,
+        windowHeight: elemento.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
       });
       if (!canvas.width || !canvas.height) throw new Error('Captura vazia');
       const link = document.createElement('a');
@@ -4814,6 +4841,7 @@ function ArenaView({ ranking, ano, mes, meses }) {
       console.error('Erro ao gerar PNG:', err);
       alert('Erro ao gerar a imagem: ' + (err && err.message ? err.message : err));
     } finally {
+      elemento?.classList.remove('arena-captura-congelada');
       setGerandoPng(false);
     }
   };
@@ -4843,6 +4871,7 @@ function ArenaView({ ranking, ano, mes, meses }) {
         @keyframes floatUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulseEmoji { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
         .arena-card-anim { animation: floatUp 0.5s ease-out both; }
+        .arena-captura-congelada .arena-card-anim { animation: none !important; opacity: 1 !important; transform: none !important; }
         .arena-pulse { animation: pulseEmoji 2s ease-in-out infinite; }
         .valp-font { font-family: "ValpFont", "Geist", sans-serif; }
         .blogger-font { font-family: "Blogger Sans", "Geist", sans-serif; }
@@ -4943,7 +4972,7 @@ function ArenaView({ ranking, ano, mes, meses }) {
                     <span>{p.tier.emoji}</span>
                     <span>{p.tier.nome}</span>
                   </div>
-                  <div className="valp-font text-2xl mb-1" style={{ color: corMedalha }}>
+                  <div className="blogger-font text-2xl mb-1" style={{ color: corMedalha, fontWeight: 700 }}>
                     {formatBRL(p.valor)}
                   </div>
                   <div className="blogger-font text-xs mb-3" style={{ color: "#78716c" }}>
