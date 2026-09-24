@@ -2720,7 +2720,9 @@ const getSerie = (ano, mes) => {
 };
 
 // Retorna meta mensal.
-// Regra: em 2026, meta = total do mesmo mês de 2025 × 1,20 (crescimento de 20%).
+// Regra: em 2026, meta = total do mesmo mês de 2025 × 1,30 (crescimento de
+// 30% — meta geral de Assinaturas definida pela diretoria, maior que o
+// crescimento padrão de 20% usado pelos outros produtos).
 // Nos demais anos, usa o valor da planilha: max(day1_value, sum_other_days).
 const getMetaMensal = (ano, mes) => {
   const metaManual = METAS_MANUAIS[`${ano}-${mes}`]?.assinaturas;
@@ -2728,7 +2730,7 @@ const getMetaMensal = (ano, mes) => {
   if (ano === 2026) {
     const serieAnt = getSerie(2025, mes);
     const totalAnt = serieAnt.reduce((a, b) => a + b.valor, 0);
-    return totalAnt * 1.2;
+    return totalAnt * 1.3;
   }
   const serie = getSerie(ano, mes);
   if (serie.length === 0) return 0;
@@ -11034,9 +11036,11 @@ function PainelA4({ ano, mes, diaCorte, diaInicio = 1, meses }) {
     const ehExcluido = produtosExcluidosMeta.includes(p.id);
     
     // Meta Geral: manual da diretoria (METAS_MANUAIS) se existir;
-    // senão ano anterior × 1.20 (ou zero se excluído)
+    // senão ano anterior × crescimento — 30% pra Assinaturas V+ (meta geral
+    // definida pela diretoria), 20% pros demais produtos.
     const metaManual = METAS_MANUAIS[chaveAtual]?.[p.id];
-    const metaGeral = ehExcluido ? 0 : (metaManual !== undefined ? metaManual : anoAnt * 1.20);
+    const crescimentoMeta = p.id === "assinaturas" ? 1.30 : 1.20;
+    const metaGeral = ehExcluido ? 0 : (metaManual !== undefined ? metaManual : anoAnt * crescimentoMeta);
     // Expectativa: meta proporcional ao dia decorrido (meta até "hoje")
     const expectativa = metaGeral * proporcaoMes;
     // Déficit ou Superávit: realizado - expectativa
