@@ -2792,6 +2792,7 @@ const META_INDIVIDUAL_VPLUS = {
   // Adicione outros meses conforme novas decisões da diretoria:
   "2026-6": 23535.20,
   "2026-7": 100000.00, // Julho/2026 — meta nova da diretoria
+  "2026-9": 28017.00,  // Setembro/2026 — meta nova da diretoria
 };
 
 // Canais de venda que NÃO são consultores: a receita entra no total do time,
@@ -2813,15 +2814,30 @@ function getMetaIndividualVPlus(ano, mes, qtdConsultores, metaMensal) {
 const getRankingConsultores = (ano, mes) => {
   const externo = usaFonteExterna("assinaturas", ano, mes) ? EXTERNO.assinaturas.pessoas?.[`${ano}-${mes}`] : null;
   const lista = externo || DADOS_PROMOTORES[`${ano}-${mes}`] || [];
-  return lista
+  const vistos = new Set();
+  const base = lista
     .filter(([nome]) => !CONSULTORES_EXCLUIDOS.has(nome))
-    .map(([nome, valor, dias]) => ({
-      nome,
-      valor,
-      dias_ativos: dias,
-      ticket_medio: dias > 0 ? valor / dias : 0,
-    }))
-    .filter((p) => p.valor > 0 || p.dias_ativos > 0);
+    .map(([nome, valor, dias]) => {
+      vistos.add(nome);
+      return {
+        nome,
+        valor,
+        dias_ativos: dias,
+        ticket_medio: dias > 0 ? valor / dias : 0,
+      };
+    });
+
+  // Consultores do time que não aparecem na planilha do mês (ou aparecem
+  // com 0) entram "zerados" em vez de sumir do ranking — assim fica claro
+  // quem não vendeu nada, em vez de só esconder.
+  const roster = new Set([...TIMES_VPLUS.sala, ...TIMES_VPLUS.digital]);
+  roster.forEach((nome) => {
+    if (CONSULTORES_EXCLUIDOS.has(nome) || CANAIS_SEM_META_VPLUS.has(nome)) return;
+    if (vistos.has(nome)) return;
+    base.push({ nome, valor: 0, dias_ativos: 0, ticket_medio: 0, semRegistro: true });
+  });
+
+  return base;
 };
 
 // Busca valor de um consultor específico em um período
@@ -4404,7 +4420,11 @@ function RankingConsultores({ ano, mes, metaMensal }) {
     const anoAnt = getRankingConsultores(ano - 1, mes);
     const totalMes = atual.reduce((a, b) => a + b.valor, 0);
     const comMeta = atual.filter((p) => !CANAIS_SEM_META_VPLUS.has(p.nome));
-    const metaIndividual = getMetaIndividualVPlus(ano, mes, comMeta.length, metaMensal);
+    // Divide a meta do time só entre quem tem registro real na planilha do
+    // mês — os "zerados" (adicionados só pra aparecerem no ranking) não
+    // devem diluir a meta calculada automaticamente dos demais.
+    const comMetaRegistrados = comMeta.filter((p) => !p.semRegistro);
+    const metaIndividual = getMetaIndividualVPlus(ano, mes, comMetaRegistrados.length, metaMensal);
 
     const base = atual.map((p, idx) => {
       const ant = anoAnt.find((a) => a.nome === p.nome);
@@ -4455,7 +4475,11 @@ function RankingConsultores({ ano, mes, metaMensal }) {
             <h2 className="display-font text-2xl font-light">Ranking de consultores</h2>
           </div>
           <p className="text-stone-400 text-sm">
-            Desempenho individual em {meses[mes - 1]}/{ano} · {ranking.length} ativos · total {formatBRL(totalTime)}
+            Desempenho individual em {meses[mes - 1]}/{ano} · {ranking.filter((p) => !p.semRegistro).length} ativos
+            {ranking.some((p) => p.semRegistro) && (
+              <> · <span style={{ color: "#f87171" }}>{ranking.filter((p) => p.semRegistro).length} zerado{ranking.filter((p) => p.semRegistro).length > 1 ? "s" : ""}</span></>
+            )}
+            {" "}· total {formatBRL(totalTime)}
           </p>
           {(() => {
             const comMeta = ranking.filter((p) => !p.semMeta);
@@ -4629,6 +4653,14 @@ function RankingConsultores({ ano, mes, metaMensal }) {
                       {p.nome.charAt(0)}
                     </div>
                     <span className="font-medium">{p.nome}</span>
+                    {p.semRegistro && (
+                      <span
+                        className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0"
+                        style={{ background: "rgba(239,68,68,0.15)", color: "#f87171" }}
+                      >
+                        zerado
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="text-right mono-font font-medium">{formatBRL(p.valor)}</td>
