@@ -4744,7 +4744,9 @@ function getTier(pct) {
 // por exemplo um link de imagem do Google Drive publicado, ou qualquer
 // link direto de imagem (.jpg/.png).
 const FOTOS_CONSULTORES = {
-  // "Cibelle": "https://exemplo.com/fotos/cibelle.jpg",
+  // Fotos ficam na pasta do Drive (link enviado pelo Samuel). Usamos o link
+  // direto do Google (lh3.googleusercontent.com) pra funcionar como <img src>.
+  "Cibelle": "https://lh3.googleusercontent.com/d/1637FxKSybLmRjjYJsf7vFgCFSC7rmSLm=s400",
 };
 
 function AvatarConsultor({ nome, tamanho, tier }) {
