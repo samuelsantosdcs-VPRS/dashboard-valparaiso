@@ -4833,6 +4833,32 @@ function AvatarConsultor({ nome, tamanho, tier }) {
   );
 }
 
+// Selo "bateu a meta" pro modo Arena — pensado pra chamar atenção no PNG
+// compartilhado no grupo, pra quem tá embaixo se sentir puxado a subir.
+function ArenaTrofeuMeta({ atingimento, grande }) {
+  if (atingimento === null || atingimento === undefined || atingimento < 100) return null;
+  const recorde = atingimento >= 150;
+  const cor = recorde ? "#fbbf24" : "#10b981";
+  return (
+    <div
+      className="blogger-font inline-flex items-center gap-1 rounded-full flex-shrink-0"
+      style={{
+        background: "#0a0a0a",
+        color: cor,
+        border: `1.5px solid ${cor}`,
+        boxShadow: `0 0 10px ${cor}80`,
+        fontWeight: 800,
+        fontSize: grande ? 12 : 10,
+        padding: grande ? "4px 10px" : "2px 7px",
+        letterSpacing: "0.02em",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {recorde ? "🏆 RECORDE" : "🏁 BATEU A META"}
+    </div>
+  );
+}
+
 function ArenaView({ ranking, ano, mes, meses }) {
   const [gerandoPng, setGerandoPng] = React.useState(false);
   const top3 = ranking.slice(0, 3);
@@ -5033,6 +5059,11 @@ function ArenaView({ ranking, ano, mes, meses }) {
                     <span>{p.tier.emoji}</span>
                     <span>{p.tier.nome}</span>
                   </div>
+                  {!p.semMeta && (
+                    <div className="mb-2">
+                      <ArenaTrofeuMeta atingimento={p.atingimento} grande />
+                    </div>
+                  )}
                   <div className="blogger-font text-2xl mb-1" style={{ color: corMedalha, fontWeight: 700 }}>
                     {formatBRL(p.valor)}
                   </div>
@@ -5109,6 +5140,7 @@ function ArenaView({ ranking, ano, mes, meses }) {
                 >
                   {p.tier.emoji} {p.tier.nome}
                 </span>
+                {!p.semMeta && <ArenaTrofeuMeta atingimento={p.atingimento} />}
               </div>
               <div className="blogger-font text-sm mb-1.5" style={{ color: "#292524", fontWeight: 700 }}>{formatBRL(p.valor)}</div>
               <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "#e7e5e4" }}>
