@@ -4853,15 +4853,15 @@ function ArenaView({ ranking, ano, mes, meses }) {
           <div className="text-stone-400 text-sm mt-1">{nomeMes}/{ano}</div>
         </div>
 
-        {/* Pódio Arena — top 3 em ordem 2-1-3, com degraus de altura tipo pódio de verdade */}
+        {/* Pódio Arena — 1º, 2º, 3º da esquerda pra direita, em ordem decrescente de altura */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 items-end">
-        {[1, 0, 2].map((idx) => {
+        {[0, 1, 2].map((idx) => {
           const p = top3[idx];
           if (!p) return <div key={idx} />;
           const ehLider = idx === 0;
           const corMedalha = ["#fbbf24","#cbd5e1","#d97706"][idx];
-          const minAltura = ehLider ? 320 : 280;
-          const alturaDegrau = [70, 110, 40][idx]; // 2º, 1º, 3º — o 1º fica mais alto
+          const minAltura = [340, 290, 250][idx]; // 1º mais alto, depois 2º, depois 3º
+          const alturaDegrau = [130, 85, 45][idx]; // degrau também decrescente
           return (
             <div key={p.nome} className="flex flex-col items-center">
               <div
