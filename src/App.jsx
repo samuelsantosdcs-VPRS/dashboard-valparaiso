@@ -2780,7 +2780,7 @@ const CONSULTORES_EXCLUIDOS = new Set(["Miguel", "Elerson", "Roselia", "Natan", 
 // Times de venda V+ — usado no gráfico de canais do Painel Diretoria.
 // Nomes conforme aparecem em DADOS_PROMOTORES.
 const TIMES_VPLUS = {
-  sala: new Set(["Elinaldo", "Jardson", "Valtemir", "Ana Carolina", "Geodson", "Jailson", "Dani", "Kleuso"]),
+  sala: new Set(["Elinaldo", "Jardson", "Valtemir", "Ana Carolina", "Geodson", "Jailson", "Kleuso"]),
   digital: new Set(["Cibelle", "Carol", "Darlene", "Ana Luiza", "David", "Loja Web"]),
 };
 
@@ -4410,6 +4410,30 @@ function Legenda({ metaExiste }) {
   );
 }
 
+// Tag estilo F1 (plaquinha de resultado) pra quem bateu a meta do mês.
+// Verde "🏁 META" pra quem bateu (≥100%), dourado "🏆 RECORDE" pra quem
+// dobrou a meta (≥150%) — igual as faixas do modo Arena, só que também
+// aparece na tabela normal, não só no PNG gamificado.
+function TrofeuMeta({ atingimento }) {
+  if (atingimento === null || atingimento === undefined || atingimento < 100) return null;
+  const recorde = atingimento >= 150;
+  const cor = recorde ? "#fbbf24" : "#10b981";
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded flex-shrink-0"
+      title={recorde ? "Dobrou a meta do mês" : "Bateu a meta do mês"}
+      style={{
+        background: "#0a0a0a",
+        color: cor,
+        border: `1px solid ${cor}`,
+        boxShadow: `0 0 8px ${cor}80`,
+      }}
+    >
+      {recorde ? "🏆 RECORDE" : "🏁 META"}
+    </span>
+  );
+}
+
 function RankingConsultores({ ano, mes, metaMensal }) {
   const [modo, setModo] = React.useState("atual"); // "atual" | "yoy"
   const [visao, setVisao] = React.useState("tabela"); // "tabela" | "arena"
@@ -4661,6 +4685,7 @@ function RankingConsultores({ ano, mes, metaMensal }) {
                         zerado
                       </span>
                     )}
+                    {!p.semMeta && <TrofeuMeta atingimento={p.atingimento} />}
                   </div>
                 </td>
                 <td className="text-right mono-font font-medium">{formatBRL(p.valor)}</td>
