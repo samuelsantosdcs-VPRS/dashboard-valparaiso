@@ -2781,7 +2781,7 @@ const CONSULTORES_EXCLUIDOS = new Set(["Miguel", "Elerson", "Roselia", "Natan", 
 // Nomes conforme aparecem em DADOS_PROMOTORES.
 const TIMES_VPLUS = {
   sala: new Set(["Elinaldo", "Jardson", "Valtemir", "Ana Carolina", "Geodson", "Jailson", "Dani", "Kleuso"]),
-  digital: new Set(["Cibelle", "Juliana", "Carol", "Darlene", "Ana Luiza", "David", "Simone", "Loja Web"]),
+  digital: new Set(["Cibelle", "Carol", "Darlene", "Ana Luiza", "David", "Loja Web"]),
 };
 
 // Meta individual de Assinaturas V+ por consultor — varia por mês
