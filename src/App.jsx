@@ -4536,7 +4536,7 @@ function RankingConsultores({ ano, mes, metaMensal }) {
       </div>
 
       {visao === "arena" ? (
-        <ArenaView ranking={ranking} ano={ano} />
+        <ArenaView ranking={ranking} ano={ano} mes={mes} meses={meses} />
       ) : (
         <>
           {/* Pódio top 3 */}
@@ -4735,9 +4735,88 @@ function getTier(pct) {
 }
 
 // Modo Arena — visualização gamificada
-function ArenaView({ ranking, ano }) {
+// Mapa opcional nome → URL de foto do consultor. Vazio por padrão: sem
+// foto, o Arena mostra o círculo com a inicial (como sempre foi). Pra
+// ativar, adiciona `"Nome exatamente como aparece no ranking": "https://..."`.
+// A URL precisa ser pública (funciona direto no navegador, sem login) —
+// por exemplo um link de imagem do Google Drive publicado, ou qualquer
+// link direto de imagem (.jpg/.png).
+const FOTOS_CONSULTORES = {
+  // "Cibelle": "https://exemplo.com/fotos/cibelle.jpg",
+};
+
+function AvatarConsultor({ nome, tamanho, tier }) {
+  const foto = FOTOS_CONSULTORES[nome];
+  const estiloBase = {
+    width: tamanho, height: tamanho,
+    borderRadius: "9999px",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontWeight: 700, color: "#fff", flexShrink: 0,
+    boxShadow: `0 0 30px ${tier.cor}60`,
+  };
+  if (foto) {
+    return (
+      <img
+        src={foto}
+        alt={nome}
+        crossOrigin="anonymous"
+        style={{ ...estiloBase, objectFit: "cover", border: `2px solid ${tier.cor}` }}
+        onError={(e) => { e.currentTarget.style.display = "none"; }}
+      />
+    );
+  }
+  return (
+    <div style={{ ...estiloBase, background: tier.gradiente, fontSize: tamanho * 0.4 }}>
+      {nome.charAt(0)}
+    </div>
+  );
+}
+
+function ArenaView({ ranking, ano, mes, meses }) {
+  const [gerandoPng, setGerandoPng] = React.useState(false);
   const top3 = ranking.slice(0, 3);
   const resto = ranking.slice(3);
+  const nomeMes = meses && mes ? meses[mes - 1] : "";
+
+  const baixarPNG = async () => {
+    setGerandoPng(true);
+    try {
+      if (!window.html2canvas) {
+        const carregarScript = (src) => new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+        try {
+          await carregarScript('https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.11/dist/html2canvas-pro.min.js');
+        } catch (e) {
+          await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+        }
+      }
+      const elemento = document.querySelector('#arena-captura');
+      if (!elemento) throw new Error('Área do ranking não encontrada');
+      await new Promise((r) => setTimeout(r, 150));
+      const canvas = await window.html2canvas(elemento, {
+        backgroundColor: '#0a0a0a',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
+      if (!canvas.width || !canvas.height) throw new Error('Captura vazia');
+      const link = document.createElement('a');
+      link.download = `Ranking_Consultores_${nomeMes}_${ano}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Erro ao gerar PNG:', err);
+      alert('Erro ao gerar a imagem: ' + (err && err.message ? err.message : err));
+    } finally {
+      setGerandoPng(false);
+    }
+  };
 
   return (
     <div>
@@ -4749,91 +4828,123 @@ function ArenaView({ ranking, ano }) {
         .arena-pulse { animation: pulseEmoji 2s ease-in-out infinite; }
       `}</style>
 
-      {/* Pódio Arena — top 3 em ordem 2-1-3 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="flex justify-end mb-3">
+        <button
+          onClick={baixarPNG}
+          disabled={gerandoPng}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          style={{
+            background: gerandoPng ? "rgba(16,185,129,0.05)" : "rgba(16,185,129,0.1)",
+            border: "1px solid rgba(16,185,129,0.3)",
+            color: "#10b981",
+            opacity: gerandoPng ? 0.6 : 1,
+            cursor: gerandoPng ? "wait" : "pointer",
+          }}
+        >
+          {gerandoPng ? "⏳ Gerando imagem..." : "📸 Baixar PNG pra compartilhar"}
+        </button>
+      </div>
+
+      <div id="arena-captura" style={{ background: "#0a0a0a", padding: 24, borderRadius: 16 }}>
+        {/* Cabeçalho da imagem — só aparece na captura/print, dá contexto pra quem recebe no grupo */}
+        <div className="text-center mb-6">
+          <div className="text-[10px] uppercase tracking-[0.25em] text-emerald-400 mb-1">Valparaíso Adventure Park</div>
+          <div className="display-font text-3xl font-light" style={{ color: "#f5f5f4" }}>🏆 Ranking de Consultores</div>
+          <div className="text-stone-400 text-sm mt-1">{nomeMes}/{ano}</div>
+        </div>
+
+        {/* Pódio Arena — top 3 em ordem 2-1-3, com degraus de altura tipo pódio de verdade */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 items-end">
         {[1, 0, 2].map((idx) => {
           const p = top3[idx];
           if (!p) return <div key={idx} />;
           const ehLider = idx === 0;
           const corMedalha = ["#fbbf24","#cbd5e1","#d97706"][idx];
           const minAltura = ehLider ? 320 : 280;
+          const alturaDegrau = [70, 110, 40][idx]; // 2º, 1º, 3º — o 1º fica mais alto
           return (
-            <div
-              key={p.nome}
-              className="rounded-2xl p-5 relative overflow-hidden arena-card-anim"
-              style={{
-                minHeight: minAltura,
-                background: `radial-gradient(ellipse at top, ${corMedalha}22 0%, rgba(255,255,255,0.02) 70%)`,
-                border: `1px solid ${corMedalha}40`,
-                transform: ehLider ? "translateY(-12px)" : "none",
-                boxShadow: ehLider ? `0 20px 60px -20px ${corMedalha}50` : "none",
-                animationDelay: `${idx * 100}ms`,
-              }}
-            >
-              {ehLider && (
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: `radial-gradient(circle at 50% 0%, ${corMedalha}30, transparent 55%)`,
-                    animation: "glow 3s ease-in-out infinite",
-                  }}
-                />
-              )}
-              <div className="flex flex-col items-center text-center relative z-10">
-                <div className="text-4xl mb-2 arena-pulse" style={{ filter: `drop-shadow(0 0 12px ${corMedalha}80)` }}>
-                  {["🥇", "🥈", "🥉"][idx]}
-                </div>
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mb-3"
-                  style={{
-                    background: p.tier.gradiente,
-                    color: "#fff",
-                    boxShadow: `0 0 30px ${p.tier.cor}60`,
-                  }}
-                >
-                  {p.nome.charAt(0)}
-                </div>
-                <div className="display-font text-xl mb-1" style={{ color: "#f5f5f4" }}>{p.nome}</div>
-                <div
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs mb-3"
-                  style={{ background: `${p.tier.cor}20`, color: p.tier.cor, border: `1px solid ${p.tier.cor}40` }}
-                >
-                  <span>{p.tier.emoji}</span>
-                  <span className="font-medium">{p.tier.nome}</span>
-                </div>
-                <div className="mono-font text-2xl font-light mb-1" style={{ color: corMedalha }}>
-                  {formatBRL(p.valor)}
-                </div>
-                <div className="text-xs text-stone-400 mb-3">
-                  {p.atingimento.toFixed(0)}% da meta
-                </div>
-                <div className="w-full h-2 rounded-full overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <div key={p.nome} className="flex flex-col items-center">
+              <div
+                className="rounded-2xl p-5 relative overflow-hidden arena-card-anim w-full"
+                style={{
+                  minHeight: minAltura,
+                  background: `radial-gradient(ellipse at top, ${corMedalha}22 0%, rgba(255,255,255,0.02) 70%)`,
+                  border: `1px solid ${corMedalha}40`,
+                  boxShadow: ehLider ? `0 20px 60px -20px ${corMedalha}50` : "none",
+                  animationDelay: `${idx * 100}ms`,
+                }}
+              >
+                {ehLider && (
                   <div
-                    className="h-full rounded-full"
+                    className="absolute inset-0 pointer-events-none"
                     style={{
-                      width: `${Math.min(100, p.atingimento)}%`,
-                      background: p.tier.gradiente,
-                      boxShadow: `0 0 10px ${p.tier.cor}80`,
+                      background: `radial-gradient(circle at 50% 0%, ${corMedalha}30, transparent 55%)`,
+                      animation: "glow 3s ease-in-out infinite",
                     }}
                   />
+                )}
+                <div className="flex flex-col items-center text-center relative z-10">
+                  <div className="text-4xl mb-2 arena-pulse" style={{ filter: `drop-shadow(0 0 12px ${corMedalha}80)` }}>
+                    {["🥇", "🥈", "🥉"][idx]}
+                  </div>
+                  <AvatarConsultor nome={p.nome} tamanho={64} tier={p.tier} />
+                  <div className="display-font text-xl mb-1 mt-3" style={{ color: "#f5f5f4" }}>{p.nome}</div>
+                  <div
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs mb-3"
+                    style={{ background: `${p.tier.cor}20`, color: p.tier.cor, border: `1px solid ${p.tier.cor}40` }}
+                  >
+                    <span>{p.tier.emoji}</span>
+                    <span className="font-medium">{p.tier.nome}</span>
+                  </div>
+                  <div className="mono-font text-2xl font-light mb-1" style={{ color: corMedalha }}>
+                    {formatBRL(p.valor)}
+                  </div>
+                  <div className="text-xs text-stone-400 mb-3">
+                    {p.atingimento.toFixed(0)}% da meta
+                  </div>
+                  <div className="w-full h-2 rounded-full overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, p.atingimento)}%`,
+                        background: p.tier.gradiente,
+                        boxShadow: `0 0 10px ${p.tier.cor}80`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {p.badges.slice(0, 5).map((b) => (
+                      <span
+                        key={b.id}
+                        title={b.label}
+                        className="text-base"
+                        style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}
+                      >
+                        {b.icon}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1 justify-center">
-                  {p.badges.slice(0, 5).map((b) => (
-                    <span
-                      key={b.id}
-                      title={b.label}
-                      className="text-base"
-                      style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}
-                    >
-                      {b.icon}
-                    </span>
-                  ))}
-                </div>
+              </div>
+              {/* Degrau do pódio */}
+              <div
+                className="w-full flex items-center justify-center rounded-t-lg"
+                style={{
+                  height: alturaDegrau,
+                  marginTop: 10,
+                  background: `linear-gradient(180deg, ${corMedalha}30, ${corMedalha}08)`,
+                  border: `1px solid ${corMedalha}40`,
+                  borderBottom: "none",
+                }}
+              >
+                <span className="display-font font-light" style={{ fontSize: 36, color: corMedalha, opacity: 0.85 }}>
+                  {idx + 1}
+                </span>
               </div>
             </div>
           );
         })}
-      </div>
+        </div>
 
       {/* Resto do ranking em cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -4901,7 +5012,9 @@ function ArenaView({ ranking, ano }) {
             </div>
           </div>
         ))}
+        </div>
       </div>
+      {/* fim de #arena-captura — a legenda abaixo fica de fora da imagem baixada */}
 
       {/* Legenda de tiers */}
       <div className="mt-6 pt-4 border-t border-white/5">
