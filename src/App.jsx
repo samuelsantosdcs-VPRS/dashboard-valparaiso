@@ -2323,8 +2323,9 @@ async function carregarFonteExterna(produto) {
         if (iPessoa >= 0) {
           const nome = nomeCurtoVPlus(l[iPessoa]);
           if (nome) {
-            const a = porPessoa.get(nome) || [0, 0];
-            porPessoa.set(nome, [a[0] + valor, a[1] + (iQtd >= 0 ? paraNumero(l[iQtd]) : 1)]);
+            const a = porPessoa.get(nome) || [0, 0, new Set()];
+            a[2].add(d.dia);
+            porPessoa.set(nome, [a[0] + valor, a[1] + (iQtd >= 0 ? paraNumero(l[iQtd]) : 1), a[2]]);
           }
         }
         usadas += 1;
@@ -2421,7 +2422,7 @@ async function carregarFonteExterna(produto) {
 
       if (porPessoa.size > 0) {
         pessoas[chave] = [...porPessoa.entries()]
-          .map(([n, [v, q]]) => [n, Math.round(v * 100) / 100, Math.round(q)])
+          .map(([n, [v, , diasSet]]) => [n, Math.round(v * 100) / 100, diasSet.size])
           .sort((a, b) => b[1] - a[1]);
       }
     }
