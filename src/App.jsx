@@ -1760,6 +1760,11 @@ const FONTES_EXTERNAS = {
     ativo: true,
     meses: ["2026-1","2026-2","2026-3","2026-4","2026-5","2026-6","2026-7","2026-8","2026-9","2026-10","2026-11","2026-12"],
     url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-yhDb8dY19iM1lbIzHnzQaZphxdlDWTQdfZ5G5dDE6ecc-KmhylIWkMImS10OXwSppSoB4ej7CekF/pub?gid=941178592&single=true&output=csv",
+    // Evita contar a mesma venda 2x: a planilha às vezes reexporta a mesma
+    // linha (mesmo id_linha) com um novo "data_emissao", quando o sistema de
+    // origem reprocessa o registro. "id_linha" é o identificador estável da
+    // venda em si, então serve de chave de deduplicação.
+    dedup: ["id_linha"],
     // nome da coluna → apelidos aceitos no cabeçalho, em minúsculo
     colunas: {
       data: ["data_pagamento", "data", "data/hora"],
